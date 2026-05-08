@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TIMB FCV 2026 — Market Intelligence Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0d1117;--sur:#161b22;--sur2:#1c2330;--brd:#30363d;
+  --txt:#e6edf3;--mut:#7d8590;--grn:#2d9a4e;--red:#da3633;
+  --blu:#388bfd;--tel:#39d353;--chv:#f0a500;--chvd:#8a5e00;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--txt);font-family:'Segoe UI',Arial,sans-serif;font-size:14px;}
+
+/* ── SEASON OVERVIEW — TREASURY LIGHT THEME ── */
+.page#p0{background:#EEEAE3;color:#1A1A1A;}
+
+/* Redefine CSS vars within p0 scope so all var() children inherit light palette */
+#p0{
+  --sur:#fff;--sur2:#F6F4F0;--brd:#E2DDD5;
+  --txt:#1A1A1A;--mut:#888888;
+  --grn:#1A5C35;--red:#9B1C1C;--blu:#1A3560;
+  --tel:#1A5C35;--chv:#B8860B;--chvd:#8a6200;
+}
+
+/* max-width + paper card */
+.p0-inner{max-width:1200px;margin:0 auto;background:#fff;border:1px solid #E2DDD5;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.09);}
+
+/* Topbar */
+.p0-topbar{background:#1a1a2e;padding:12px 24px;border-bottom:4px solid #B8860B;}
+.p0-topbar-title{color:#fff;font-size:13px;font-weight:700;letter-spacing:.04em;}
+.p0-topbar-sub{color:#B8860B;font-size:9px;text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+
+/* Body padding */
+.p0-body{padding:20px 28px 28px;background:#F6F4F0;}
+
+/* Footer */
+.p0-foot{text-align:center;padding:10px 24px;font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:.07em;border-top:4px solid #B8860B;background:#1a1a2e;}
+
+/* ovw-cards — light borders, keep dark header bars for contrast */
+#p0 .ovw-card{background:#fff;}
+#p0 .ovw-card.nat{border-color:#c8b86e;}
+#p0 .ovw-card.con{border-color:#A8D5B5;}
+#p0 .ovw-card.auc{border-color:#ADC0DF;}
+#p0 .ovw-head.nat{background:#1a1a2e;color:#B8860B;}
+#p0 .ovw-head.con{background:#1a1a2e;color:#A8D5B5;}
+#p0 .ovw-head.auc{background:#1a1a2e;color:#88AACC;}
+#p0 .ovw-icon.ni{background:#2c2808;color:#B8860B;}
+#p0 .ovw-icon.ci{background:#0d2918;color:#A8D5B5;}
+#p0 .ovw-icon.ai{background:#0d1f3c;color:#88AACC;}
+
+/* Section headers */
+#p0 .sec-hdr{border-bottom-color:#E2DDD5;}
+#p0 .sec-hdr h2{color:#1A1A1A;}
+#p0 .sec-totals strong{color:#1A1A1A;}
+#p0 .sec-icon.si-a{background:#E8EFF8;color:#1A3560;}
+#p0 .sec-icon.si-c{background:#EAF5EE;color:#1A5C35;}
+#p0 .sec-icon.si-x{background:#FDF8ED;color:#B8860B;}
+
+/* Floor + Region cards */
+#p0 .fc.fl{background:#EEF2FA;border-color:#C5D2E8;}
+#p0 .fc.rg{background:#fff;border-color:#E2DDD5;}
+#p0 .fc.fl .fn{color:#1A3560;}
+#p0 .fc.rg .fn{color:#1A5C35;}
+#p0 .fc .fv.y5{color:#999;}
+#p0 .fc .fv.y6b{color:#1A3560;}
+#p0 .fc .fv.y6g{color:#1A5C35;}
+#p0 .fc .fp{color:#888;}
+#p0 .tag.tup{background:#EAF5EE;color:#1A5C35;border:1px solid #A8D5B5;}
+#p0 .tag.tdn{background:#FDF0F0;color:#9B1C1C;border:1px solid #F5C0C0;}
+#p0 .tag.twn{background:#FEF6ED;color:#A85600;border:1px solid #F5D090;}
+
+/* Price chart wrapper */
+#p0 .price-line-wrap{background:#fff!important;border-color:#E2DDD5!important;}
+#p0 .plct{color:#888;}
+
+/* Override hardcoded SVG dark grid lines + axis text */
+#p0 svg line{stroke:#E2DDD5!important;}
+#p0 svg text{fill:#888!important;}
+
+/* Chevron context cards */
+#p0 .cc.con{border-color:#A8D5B5;}
+#p0 .cc.auc{border-color:#ADC0DF;}
+#p0 .cc.tot{border-color:#E2DDD5;}
+#p0 .cc.con .ch{background:#EAF5EE;color:#1A5C35;}
+#p0 .cc.auc .ch{background:#E8EFF8;color:#1A3560;}
+#p0 .cc.tot .ch{background:#FDF8ED;color:#B8860B;}
+#p0 .cc .ch span{background:transparent!important;}
+
+/* HEADER */
+.hdr{background:var(--sur);border-bottom:1px solid var(--brd);padding:11px 24px;display:flex;align-items:center;justify-content:space-between;}
+.hdr-l{display:flex;align-items:center;gap:11px;}
+.logo{width:34px;height:34px;background:var(--chv);border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#000;font-size:14px;}
+.hdr h1{font-size:15px;font-weight:700;}
+.hdr p{font-size:11px;color:var(--mut);margin-top:1px;}
+.badge{background:#1f7a3c;color:var(--tel);border:1px solid var(--grn);padding:2px 8px;border-radius:9px;font-size:10px;font-weight:700;}
+
+/* TABS */
+.tabs{display:flex;padding:0 24px;background:var(--sur);border-bottom:1px solid var(--brd);}
+.tab{padding:9px 18px;cursor:pointer;font-size:13px;font-weight:500;color:var(--mut);border-bottom:2px solid transparent;transition:all .15s;}
+.tab:hover{color:var(--txt);}
+.tab.active{color:var(--chv);border-bottom-color:var(--chv);}
+
+/* PAGE */
+.page{display:none;padding:24px 28px 48px;}
+.page.active{display:block;}
+
+/* ---- OVERVIEW COMPARISON TABLE ---- */
+.ovw-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px;}
+.ovw-card{border-radius:10px;border:1px solid var(--brd);overflow:hidden;}
+.ovw-card.nat{border-color:#3a3a2a;}
+.ovw-card.con{border-color:#1a4030;}
+.ovw-card.auc{border-color:#1a3a6c;}
+.ovw-head{padding:11px 16px;display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;}
+.ovw-head.nat{background:#1a1a0a;color:#d4c060;}
+.ovw-head.con{background:#0a1f14;color:var(--grn);}
+.ovw-head.auc{background:#080f1a;color:var(--blu);}
+.ovw-icon{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;}
+.ni{background:#2e2a0a;color:#d4c060;}
+.ci{background:#0d2918;color:var(--grn);}
+.ai{background:#0d1f3c;color:var(--blu);}
+.ovw-body{padding:0;}
+.ovw-row{display:grid;grid-template-columns:60px 1fr 1fr 1fr;gap:0;border-bottom:1px solid var(--brd);}
+.ovw-row:last-child{border:none;}
+.ovw-row .lbl{padding:11px 16px;font-size:12px;color:var(--mut);font-weight:600;display:flex;align-items:center;}
+.ovw-row .col-hdr{padding:5px 10px;font-size:10px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.04em;display:flex;align-items:center;justify-content:flex-end;border-bottom:1px solid var(--brd);}
+.ovw-col{padding:12px 12px;text-align:right;font-size:13px;font-variant-numeric:tabular-nums;}
+.ovw-col .v26{font-size:15px;font-weight:700;}
+.ovw-col .v25{font-size:12px;color:var(--mut);margin-top:2px;}
+.ovw-col .chg{font-size:11px;font-weight:600;margin-top:3px;}
+.up{color:var(--tel);} .dn{color:var(--red);}
+
+/* HEADER DIVIDERS */
+.sec-hdr{display:flex;align-items:center;gap:9px;margin:28px 0 16px;padding-bottom:10px;border-bottom:2px solid var(--brd);}
+.sec-icon{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;flex-shrink:0;}
+.si-a{background:#0d1f3c;color:var(--blu);}
+.si-c{background:#0d2918;color:var(--grn);}
+.si-x{background:#1a1400;color:var(--chv);}
+.sec-hdr h2{font-size:14px;font-weight:700;color:var(--txt);}
+.sec-totals{margin-left:auto;display:flex;gap:18px;font-size:11px;}
+.sec-totals span{color:var(--mut);}
+.sec-totals strong{color:var(--txt);}
+
+/* FLOOR / REGION CARDS */
+.fc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
+.fc{border-radius:10px;padding:16px 18px;border:1px solid;}
+.fc.fl{background:#080f1a;border-color:#1a3a6c;}
+.fc.rg{background:var(--sur2);border-color:var(--brd);}
+.fc .fn{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;}
+.fc.fl .fn{color:var(--blu);}
+.fc.rg .fn{color:var(--grn);}
+.fc .cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.fc .yr{font-size:10px;font-weight:600;color:var(--mut);margin-bottom:2px;}
+.fc .fv{font-size:16px;font-weight:700;line-height:1.2;}
+.fc .fv.y6b{color:var(--blu);}
+.fc .fv.y6g{color:var(--tel);}
+.fc .fv.y5{color:var(--mut);}
+.fc .fp{font-size:10px;color:var(--mut);margin-top:2px;}
+.fc .tags{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;}
+.tag{padding:1px 6px;border-radius:4px;font-weight:700;font-size:10px;}
+.tup{background:#0d2e1a;color:var(--tel);} .tdn{background:#2e0d0d;color:var(--red);} .twn{background:#2e200d;color:#d29922;}
+
+/* PRICE LINE CHART */
+.price-line-wrap{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:18px 20px;margin-bottom:18px;}
+.price-line-wrap.blue{border-color:#1a3a6c;}
+.price-line-wrap.green{border-color:#1a4030;}
+.plct{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.plct .dl{width:6px;height:6px;border-radius:50%;}
+
+/* CHEVRON CONTEXT */
+.chv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:8px;}
+.cc{border-radius:10px;border:1px solid;overflow:hidden;}
+.cc.con{border-color:#1a4030;}
+.cc.auc{border-color:#1a3a6c;}
+.cc.tot{border-color:var(--chvd);}
+.cc .ch{padding:8px 13px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;display:flex;align-items:center;gap:6px;}
+.cc.con .ch{background:#0a1f14;color:var(--grn);}
+.cc.auc .ch{background:#080f1a;color:var(--blu);}
+.cc.tot .ch{background:#1a1400;color:var(--chv);}
+.cc .cb{padding:4px 0;}
+.cc .cr{display:grid;grid-template-columns:50px 1fr 1fr 1fr;border-top:1px solid var(--brd);}
+.cc .cr .cl{padding:8px 13px;font-size:11px;color:var(--mut);font-weight:600;display:flex;align-items:center;}
+.cc .cv{padding:8px 8px;text-align:right;font-size:12px;font-variant-numeric:tabular-nums;}
+.cc .cv .vv{font-weight:700;}
+.cc .cv .vv.gv{color:var(--grn);}
+.cc .cv .vv.bv{color:var(--blu);}
+.cc .cv .vv.av{color:var(--chv);}
+.cc .cv .vy{font-size:10px;color:var(--mut);margin-top:2px;}
+.cc .cch{display:grid;grid-template-columns:50px 1fr 1fr 1fr;border-bottom:1px solid var(--brd);}
+.cc .cch .chc{padding:4px 8px;font-size:10px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.04em;text-align:right;}
+.cc .cch .chc:first-child{text-align:left;padding-left:13px;}
+
+/* CHEVRON ANALYTICS PAGE */
+.k4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.k{background:var(--sur);border:1px solid var(--brd);border-radius:8px;padding:11px 13px;}
+.k.ck{border-color:var(--chvd);background:#1a1400;}
+.k .lbl{font-size:10px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;}
+.k .val{font-size:17px;font-weight:700;line-height:1.1;}
+.k .val.av{color:var(--chv);}
+.k .sm{font-size:11px;color:var(--mut);margin-top:5px;}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.card{background:var(--sur);border:1px solid var(--brd);border-radius:10px;padding:14px 16px;}
+.card.ck{border-color:var(--chvd);}
+.ct{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin-bottom:11px;display:flex;align-items:center;gap:6px;}
+.dot{width:6px;height:6px;border-radius:50%;}
+.dg{background:var(--grn);} .db{background:var(--blu);} .da{background:var(--chv);}
+.divider{border:none;border-top:1px solid var(--brd);margin:11px 0;}
+.rrow{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.rn{width:68px;font-size:11px;color:var(--mut);flex-shrink:0;}
+.rbw{flex:1;height:10px;background:var(--brd);border-radius:3px;overflow:hidden;}
+.rb{height:100%;border-radius:3px;background:var(--chv);}
+.rv{width:95px;text-align:right;font-size:11px;color:var(--chv);}
+.ptbl{width:100%;border-collapse:collapse;font-size:12px;}
+.ptbl th{padding:6px 9px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);border-bottom:1px solid var(--brd);}
+.ptbl th.r{text-align:right;}
+.ptbl td{padding:6px 9px;border-bottom:1px solid #1c2330;}
+.ptbl td.r{text-align:right;font-variant-numeric:tabular-nums;}
+.ptbl tr.gh td{background:#1a1f27;font-size:9px;font-weight:700;text-transform:uppercase;color:var(--mut);padding:3px 9px;}
+.ptbl tr.ck{background:#1a1400;}
+.ptbl tr.ck td{color:var(--chv);}
+.ptbl tr.mk td{color:var(--mut);font-style:italic;}
+
+/* COMPETITOR PAGE */
+.ltbl{width:100%;border-collapse:collapse;font-size:12px;}
+.ltbl th{padding:6px 9px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);border-bottom:1px solid var(--brd);}
+.ltbl th.r{text-align:right;}
+.ltbl td{padding:7px 9px;border-bottom:1px solid #1c2330;}
+.ltbl td.r{text-align:right;font-variant-numeric:tabular-nums;}
+.ltbl tr.ckr{background:#1a1400;}
+.ltbl tr.ckr td{color:var(--chv);}
+.ltbl tr:hover td{background:#1c2330;}
+.rk{display:inline-block;width:19px;height:19px;border-radius:50%;background:var(--sur2);color:var(--mut);font-size:10px;font-weight:700;text-align:center;line-height:19px;}
+.rk.t3{background:#d29922;color:#000;}
+.vbar{height:4px;border-radius:2px;background:var(--brd);overflow:hidden;margin-top:3px;}
+.vfill{height:100%;border-radius:2px;background:var(--grn);}
+.vfill.cv{background:var(--chv);}
+
+/* RISK BANNER */
+.risk-ban{border-radius:9px;padding:11px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;}
+.risk-ban.twin{background:rgba(218,54,51,.1);border:1px solid rgba(218,54,51,.35);}
+.rpil{display:inline-block;padding:3px 11px;border-radius:10px;font-size:11px;font-weight:700;}
+.rpil-twin{background:#3a1212;color:#f87171;}
+.rpil-warn{background:#2a1a00;color:var(--chv);}
+.risk-blk{display:flex;align-items:center;gap:10px;}
+.risk-dt{font-size:10px;color:var(--mut);}
+.risk-dt strong{color:var(--txt);}
+.risk-sig{font-size:10px;font-style:italic;color:var(--mut);border-left:1px solid var(--brd);padding-left:13px;flex:1;}
+
+/* SNAPSHOT CARDS */
+.snap2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.snap-c{background:var(--sur);border:1px solid var(--brd);border-radius:8px;overflow:hidden;}
+.snap-hd2{padding:7px 13px;display:flex;align-items:center;gap:7px;}
+.snap-hdb{width:4px;border-radius:2px;align-self:stretch;min-height:16px;}
+.snap-hdt{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+.snap-bd2{padding:10px 13px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
+.snap-it{padding:6px 8px;border-radius:6px;background:var(--sur2);}
+.snap-lb{font-size:9px;color:var(--mut);text-transform:uppercase;letter-spacing:.3px;margin-bottom:2px;}
+.snap-vl{font-size:14px;font-weight:700;}
+.snap-sb{font-size:9px;color:var(--mut);margin-top:2px;}
+.sv-r{color:var(--red);} .sv-g{color:var(--tel);} .sv-a{color:var(--chv);}
+
+/* IMPLIED LOSS CARD */
+.loss-card{background:rgba(218,54,51,.07);border:1px solid rgba(218,54,51,.25);border-radius:9px;padding:12px 16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+.loss-lbl{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em;}
+.loss-val{font-size:24px;font-weight:700;color:var(--red);margin:4px 0;}
+.loss-sub{font-size:10px;color:var(--mut);}
+.loss-gap{font-size:22px;font-weight:700;color:var(--red);}
+
+/* PEER TABLE */
+.peer-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.peer-tbl th{padding:6px 9px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);border-bottom:1px solid var(--brd);}
+.peer-tbl th.r{text-align:right;}
+.peer-tbl td{padding:5px 9px;border-bottom:1px solid #1c2330;}
+.peer-tbl td.r{text-align:right;font-variant-numeric:tabular-nums;}
+.peer-tbl tr.pme td{background:#1a1400;color:var(--chv);font-weight:700;}
+.peer-tbl tfoot td{border-top:1.5px solid var(--brd);font-size:11px;font-weight:700;background:#1a1f27;padding:6px 9px;}
+.peer-tbl tfoot td.r{text-align:right;}
+
+canvas{max-height:240px;}
+.tall canvas{max-height:290px;}
+
+/* ── CHEVRON ANALYTICS — FULL TREASURY LAYOUT ── */
+canvas{max-height:220px;}
+
+/* P1 outer: cream bg matching treasury body */
+.page#p1{padding:20px 16px 40px;background:#EEEAE3;color:#1A1A1A;}
+
+/* Paper card */
+.p1-paper{max-width:1100px;margin:0 auto;background:#fff;border:1px solid #E2DDD5;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.09);}
+
+/* Top bar */
+.t-topbar{background:#1a1a2e;padding:12px 24px;border-bottom:4px solid #B8860B;}
+.t-topbar-inner{display:flex;align-items:center;justify-content:space-between;}
+.t-title{color:#fff;font-size:13px;font-weight:700;letter-spacing:.04em;}
+.t-sub{color:#B8860B;font-size:9px;text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+.t-navbtn{padding:3px 12px;border:1px solid rgba(184,134,11,.4);background:transparent;color:#c8c0a8;font-size:10px;font-weight:600;cursor:pointer;border-radius:3px;transition:all .1s;}
+.t-navbtn.on{background:#B8860B;color:#fff;border-color:#B8860B;}
+
+/* National summary bar */
+.t-natbar{background:#F6F4F0;border-bottom:1px solid #E2DDD5;padding:6px 24px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;}
+.t-nat-item{display:flex;flex-direction:column;}
+.t-nat-val{font-size:12px;font-weight:700;color:#1A1A1A;font-variant-numeric:tabular-nums;}
+.t-nat-val.grn{color:#1A5C35;}.t-nat-val.gld{color:#B8860B;}
+.t-nat-lbl{font-size:8px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-top:1px;}
+.t-nat-divider{width:1px;height:24px;background:#E2DDD5;}
+.t-nat-note{font-size:9px;color:#aaa;font-style:italic;margin-left:auto;}
+
+/* KPI strip */
+.t-kpirow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding:14px 24px;border-bottom:1px solid #E2DDD5;background:#F6F4F0;}
+.t-kpi{background:#fff;border:1px solid #E2DDD5;border-radius:8px;padding:12px 14px;}
+.t-kpi-lbl{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#888;margin-bottom:4px;}
+.t-kpi-val{font-size:16px;font-weight:700;color:#1A1A1A;font-variant-numeric:tabular-nums;line-height:1;}
+.t-kpi-val.grn{color:#1A5C35;}.t-kpi-val.red{color:#9B1C1C;}.t-kpi-val.gld{color:#B8860B;}
+.t-kpi-sub{font-size:9px;color:#555;margin-top:3px;}
+.t-kpi-sub.grn{color:#1A5C35;}.t-kpi-sub.red{color:#9B1C1C;}
+.t-prog{height:3px;background:#EEEAE3;border-radius:2px;margin-top:6px;}
+.t-prog-f{height:100%;border-radius:2px;background:#B8860B;}
+.t-prog-f.grn{background:#1A5C35;}.t-prog-f.red{background:#9B1C1C;}
+
+/* Body */
+.t-body{padding:18px 24px 24px;background:#F6F4F0;}
+
+/* Sidebar + main grid */
+.t-main-layout{display:grid;grid-template-columns:210px 1fr;gap:14px;}
+.t-sidebar{background:#fff;border:1px solid #E2DDD5;border-radius:10px;padding:12px 12px 16px;align-self:start;}
+.t-sb-section{margin-bottom:12px;}
+.t-sb-hd{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#888;margin-bottom:6px;padding-bottom:3px;border-bottom:1px solid #F0EDE8;}
+.t-reg-card{padding:8px 10px;border:1px solid #E2DDD5;border-radius:7px;cursor:pointer;margin-bottom:4px;background:#F6F4F0;transition:all .12s;}
+.t-reg-card:hover{border-color:#B8860B;background:#FDF8ED;}
+.t-reg-card.active{border-color:#B8860B;background:#FDF8ED;box-shadow:0 0 0 2px rgba(184,134,11,.15);}
+.t-reg-name{font-size:12px;font-weight:700;color:#1A1A1A;}
+.t-reg-meta{font-size:9px;color:#888;margin-top:1px;}
+.t-pace-row{margin-bottom:7px;}
+.t-pace-lbl{font-size:9px;font-weight:600;color:#1A1A1A;}
+.t-pace-pct{font-size:10px;font-weight:700;}
+.t-pace-track{height:4px;background:#EEEAE3;border-radius:2px;margin:2px 0;}
+.t-pace-fill{height:100%;border-radius:2px;}
+.t-pace-sub{font-size:8px;color:#aaa;}
+.t-sb-metric{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #F0EDE8;font-size:9px;}
+.t-sb-mlbl{color:#888;}.t-sb-mval{font-weight:700;color:#1A1A1A;}
+.t-sb-mval.gld{color:#B8860B;}.t-sb-mval.grn{color:#1A5C35;}
+
+/* Main content column */
+.t-main-content{display:flex;flex-direction:column;gap:10px;}
+
+/* Cards */
+.t-card{background:#fff;border:1px solid #E2DDD5;border-radius:10px;overflow:hidden;}
+.t-card-hd{background:#F6F4F0;padding:6px 14px;border-bottom:1px solid #E2DDD5;display:flex;align-items:center;gap:6px;}
+.t-hd-bar{width:3px;height:12px;border-radius:1px;flex-shrink:0;}
+.t-hd-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#555;}
+.t-card-body{padding:12px 16px;}
+
+/* Tables */
+.t-tbl{width:100%;border-collapse:collapse;font-size:10px;font-variant-numeric:tabular-nums;}
+.t-tbl th{background:#F6F4F0;padding:5px 9px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#888;text-align:left;border-bottom:1px solid #E2DDD5;white-space:nowrap;}
+.t-tbl th.r{text-align:right;}
+.t-tbl td{padding:5px 9px;color:#1A1A1A;border-bottom:1px solid #F0EDE8;white-space:nowrap;}
+.t-tbl td.r{text-align:right;}
+.t-tbl tr.mkt td{background:#FAFAF8;}
+.t-tbl tr.chev td{background:#F6F4F0;font-weight:700;}
+.t-tbl tr.gap td{background:#fff;color:#888;font-size:9px;}
+.t-tbl tr.ttl td{background:#F6F4F0;font-weight:700;border-top:1px solid #E2DDD5;}
+.t-tbl .grn{color:#1A5C35;font-weight:600;}.t-tbl .red{color:#9B1C1C;font-weight:600;}
+.t-tbl .gld{color:#B8860B;font-weight:600;}.t-tbl .mut{color:#888;}
+.t-tbl tr.me td{background:#FDF8ED!important;font-weight:700;}
+
+/* Saving highlight */
+.t-save{background:#EAF5EE;border-left:3px solid #1A5C35;padding:8px 12px;border-radius:0 6px 6px 0;margin-bottom:8px;}
+.t-save-lbl{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#1A5C35;}
+.t-save-val{font-size:17px;font-weight:700;color:#1A5C35;font-variant-numeric:tabular-nums;}
+.t-save-sub{font-size:9px;color:#555;}
+
+/* Pills */
+.t-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;white-space:nowrap;}
+.t-pill.red{background:#FDF0F0;color:#9B1C1C;border:1px solid #F5C0C0;}
+.t-pill.amb{background:#FEF6ED;color:#A85600;border:1px solid #F5D090;}
+.t-pill.grn{background:#EAF5EE;color:#1A5C35;border:1px solid #A8D5B5;}
+
+/* Two-col grid + column wrapper */
+.t-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;}
+.t-col{display:flex;flex-direction:column;gap:10px;}
+
+/* Chart */
+.t-chart{position:relative;height:160px;}
+
+/* Footer */
+.t-foot{text-align:center;padding:10px 24px;font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:.07em;border-top:4px solid #B8860B;background:#1a1a2e;}
+
+/* ── COMPETITOR INTELLIGENCE — TREASURY LIGHT THEME ── */
+.page#p2{background:#EEEAE3;color:#1A1A1A;}
+#p2{--sur:#fff;--sur2:#F6F4F0;--brd:#E2DDD5;--txt:#1A1A1A;--mut:#888;--grn:#1A5C35;--red:#9B1C1C;--blu:#1A3560;--tel:#1A5C35;--chv:#B8860B;}
+.p2-inner{max-width:1200px;margin:0 auto;background:#fff;border:1px solid #E2DDD5;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.09);}
+.p2-topbar{background:#1a1a2e;padding:12px 24px;border-bottom:4px solid #B8860B;}
+.p2-topbar-title{color:#fff;font-size:13px;font-weight:700;letter-spacing:.04em;}
+.p2-topbar-sub{color:#B8860B;font-size:9px;text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+.p2-body{padding:20px 28px 28px;background:#F6F4F0;}
+.p2-foot{text-align:center;padding:10px 24px;font-size:9px;color:#aaa;text-transform:uppercase;letter-spacing:.07em;border-top:4px solid #B8860B;background:#1a1a2e;}
+.p2-sec{display:flex;align-items:center;gap:9px;margin:0 0 14px;padding-bottom:10px;border-bottom:2px solid #E2DDD5;flex-wrap:wrap;}
+.p2-sec-ico{width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0;}
+.p2-sec h2{font-size:13px;font-weight:700;color:#1A1A1A;}
+.p2-sec-note{margin-left:auto;font-size:9px;color:#888;font-style:italic;}
+.p2-tbl{width:100%;border-collapse:collapse;font-size:10px;font-variant-numeric:tabular-nums;}
+.p2-tbl th{background:#F6F4F0;padding:5px 9px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#888;text-align:left;border-bottom:1px solid #E2DDD5;white-space:nowrap;}
+.p2-tbl th.r{text-align:right;}
+.p2-tbl td{padding:4px 9px;color:#1A1A1A;border-bottom:1px solid #F0EDE8;white-space:nowrap;}
+.p2-tbl td.r{text-align:right;}
+.p2-tbl tr.p2me td{background:#FDF8ED;font-weight:700;}
+.p2-tbl tr.p2big td{background:#FAFAF8;}
+.p2-tier{display:inline-block;padding:1px 6px;border-radius:4px;font-size:8px;font-weight:700;white-space:nowrap;}
+.p2-tier.big{background:#FDF8ED;color:#B8860B;border:1px solid #e8d080;}
+.p2-tier.med{background:#EEF2FA;color:#1A3560;border:1px solid #ADC0DF;}
+.p2-tier.sm{background:#F0EDE8;color:#888;border:1px solid #D0CAC0;}
+.p2-vbar{height:4px;background:#E2DDD5;border-radius:2px;width:80px;display:inline-block;vertical-align:middle;}
+.p2-vbar-f{height:100%;border-radius:2px;}
+.p2-grp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+.p2-grp{background:#fff;border:1px solid #E2DDD5;border-radius:10px;overflow:hidden;}
+.p2-grp-hd{padding:9px 14px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #E2DDD5;}
+.p2-grp-accent{width:4px;min-height:18px;border-radius:2px;align-self:stretch;flex-shrink:0;}
+.p2-grp-name{font-size:11px;font-weight:700;color:#1A1A1A;}
+.p2-grp-tot{margin-left:auto;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;}
+.p2-grp-body{padding:8px 14px;}
+.p2-mem-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #F0EDE8;font-size:9px;gap:6px;}
+.p2-mem-row:last-child{border:none;}
+.p2-mem-co{color:#1A1A1A;flex:1;}
+.p2-mem-note{color:#bbb;font-style:italic;font-size:8px;}
+.p2-mem-mass{font-weight:600;color:#1A3560;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.p2-mem-mass.na{color:#ccc;}
+.p2-grp-vs{padding:7px 14px;background:#F6F4F0;border-top:1px solid #E2DDD5;}
+.p2-grp-vs-lbl{font-size:8px;color:#888;margin-bottom:4px;display:flex;justify-content:space-between;}
+.p2-grp-bars{display:flex;flex-direction:column;gap:3px;}
+.p2-grp-bar-row{display:flex;align-items:center;gap:6px;font-size:8px;}
+.p2-grp-bar-lbl{width:48px;color:#888;flex-shrink:0;}
+.p2-grp-bar-track{flex:1;height:5px;background:#E2DDD5;border-radius:3px;overflow:hidden;}
+.p2-grp-bar-fill{height:100%;border-radius:3px;}
+.p2-grp-note{font-size:8px;color:#aaa;font-style:italic;padding:4px 14px 6px;border-top:1px solid #F0EDE8;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-l">
+    <div class="logo">CT</div>
+    <div>
+      <h1>TIMB FCV 2026 — Market Intelligence</h1>
+      <p>Chevron Tobacco &nbsp;·&nbsp; Season Day 1–39 &nbsp;·&nbsp; 04 Mar – 29 Apr 2026</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:9px;align-items:center">
+    <span class="badge">DAY 39</span>
+    <span style="font-size:11px;color:var(--mut)">2026 vs 2025 Day 1–39 equivalent</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="st(0)">Season Overview</div>
+  <div class="tab" onclick="st(1)">Regional Competitiveness</div>
+  <div class="tab" onclick="st(2)">Competitor Intelligence</div>
+</div>
+
+<!-- ============================================================
+     PAGE 1 — SEASON OVERVIEW
+     ============================================================ -->
+<div class="page active" id="p0">
+<div class="p0-inner">
+<div class="p0-topbar">
+  <div class="p0-topbar-title">TIMB FCV — 2026 SEASON OVERVIEW</div>
+  <div class="p0-topbar-sub">Season Day 39 &nbsp;&middot;&nbsp; Full Season &nbsp;&middot;&nbsp; 04 Mar – 29 Apr 2026</div>
+</div>
+<div class="p0-body">
+
+  <!-- ====== OVERVIEW SUMMARY TABLE ====== -->
+  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#888;margin-bottom:10px">Overview — 2026 vs 2025 (Day 1–39 equivalent)</div>
+  <div class="ovw-grid">
+
+    <!-- National Crop -->
+    <div class="ovw-card nat">
+      <div class="ovw-head nat"><div class="ovw-icon ni">Σ</div>National Crop</div>
+      <div class="ovw-body">
+        <div style="display:grid;grid-template-columns:52px 1fr 1fr 1fr;border-bottom:1px solid var(--brd)">
+          <div></div>
+          <div class="col-hdr" style="padding:5px 10px;font-size:10px;color:var(--mut);font-weight:600;text-align:right;display:flex;align-items:center;justify-content:flex-end">2025</div>
+          <div class="col-hdr" style="padding:5px 10px;font-size:10px;color:var(--mut);font-weight:600;text-align:right;display:flex;align-items:center;justify-content:flex-end">2026</div>
+          <div class="col-hdr" style="padding:5px 10px;font-size:10px;color:var(--mut);font-weight:600;text-align:right;display:flex;align-items:center;justify-content:flex-end">Change</div>
+        </div>
+        <div style="display:grid;grid-template-columns:52px 1fr 1fr 1fr;border-bottom:1px solid var(--brd)">
+          <div class="ovw-row" style="display:contents"><div style="padding:9px 0 9px 13px;font-size:11px;color:var(--mut);font-weight:600;display:flex;align-items:center">Mass</div><div style="padding:9px 10px;text-align:right;font-size:12px;color:var(--mut)">123.5M</div><div style="padding:9px 10px;text-align:right;font-size:13px;font-weight:700;color:#d4c060">179.9M</div><div style="padding:9px 10px;text-align:right;font-size:12px;font-weight:700" class="up">▲ +45.7%</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:52px 1fr 1fr 1fr">
+          <div style="display:contents"><div style="padding:9px 0 9px 13px;font-size:11px;color:var(--mut);font-weight:600;display:flex;align-items:center">Price</div><div style="padding:9px 10px;text-align:right;font-size:12px;color:var(--mut)">$3.402</div><div style="padding:9px 10px;text-align:right;font-size:13px;font-weight:700;color:#d4c060">$2.619</div><div style="padding:9px 10px;text-align:right;font-size:12px;font-weight:700" class="dn">▼ −23.0%</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contract -->
+    <div class="ovw-card con">
+      <div class="ovw-head con"><div class="ovw-icon ci">C</div>Contract</div>
+      <div class="ovw-body">
+        <div style="display:grid;grid-template-columns:52px 1fr 1fr 1fr;border-bottom:1px solid var(--brd)">
+          <div></div>
+          <div style="padding:5px 10px;font-size:10px;color:var(--mut);font-weight:600;text-align:right">2025</div>
+          <div style="padding:5px 10px;font-size:10px;color:var(--mut);font-weight:600;text-align:right">2026</div>
+          <div style="padding:5px 10px;font-size:10px;color:var(--mut);font-weight:600;text-align:right">Change</div>
+        </div>
+        <div style="display:grid;grid-template-columns:52px 1fr 1fr 1fr;border-bottom:1px solid var(--brd)">
+          <div style="display:contents"><div style="padding:9px 0 9px 13px;font-size:11px;color:var(--mut);font-weight:600;display:flex;align-items:center">Mass</div><div style="padding:9px 10px;text-align:right;font-size:12px;color:var(--mut)">117.0M</div><div style="padding:9px 10px;text-align:right;font-size:13px;font-weight:700;color:var(--tel)">168.9M</div><div style="padding:9px 10px;text-align:right;font-size:12px;font-weight:700" class="up">▲ +44.4%</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:52px 1fr 1fr 1fr">
+          <div style="display:contents"><div style="padding:9px 0 9px 13px;font-size:11px;color:var(--mut);font-weight:600;display:flex;align-items:center">Price</div><div style="padding:9px 10px;text-align:right;font-size:12px;color:var(--mut)">$3.400</div><div style="padding:9px 10px;text-align:right;font-size:13px;font-weight:700;color:var(--tel)">$2.660</div><div style="padding:9px 10px;text-align:right;font-size:12px;font-weight:700" class="dn">▼ −21.8%</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auction -->
+    <div class="ovw-card auc">
+      <div class="ovw-head auc"><div class="ovw-icon ai">A</div>Auction</div>
+      <div class="ovw-body">
+        <div style="display:grid;grid-template-columns:52px 1fr 1fr 1fr;border-bottom:1px solid var(--brd)">
+          <div></div>
+          <div style="padding:5px 10px;font-size:10px;color:var(--mut);font-weight:600;text-align:right">2025</div>
+          <div style="padding:5px 10px;font-size:10px;color:var(--mut);font-weight:600;text-align:right">2026</div>
+          <div style="padding:5px 10px;font-size:10px;color:var(--mut);font-weight:600;text-align:right">Change</div>
+        </div>
+        <div style="display:grid;grid-template-columns:52px 1fr 1fr 1fr;border-bottom:1px solid var(--brd)">
+          <div style="display:contents"><div style="padding:9px 0 9px 13px;font-size:11px;color:var(--mut);font-weight:600;display:flex;align-items:center">Mass</div><div style="padding:9px 10px;text-align:right;font-size:12px;color:var(--mut)">6.49M</div><div style="padding:9px 10px;text-align:right;font-size:13px;font-weight:700;color:var(--blu)">11.06M</div><div style="padding:9px 10px;text-align:right;font-size:12px;font-weight:700" class="up">▲ +70.4%</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:52px 1fr 1fr 1fr">
+          <div style="display:contents"><div style="padding:9px 0 9px 13px;font-size:11px;color:var(--mut);font-weight:600;display:flex;align-items:center">Price</div><div style="padding:9px 10px;text-align:right;font-size:12px;color:var(--mut)">$3.427</div><div style="padding:9px 10px;text-align:right;font-size:13px;font-weight:700;color:var(--blu)">$1.999</div><div style="padding:9px 10px;text-align:right;font-size:12px;font-weight:700" class="dn">▼ −41.6%</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== AUCTION SECTION ====== -->
+  <div class="sec-hdr">
+    <div class="sec-icon si-a">A</div>
+    <h2>AUCTION</h2>
+    <div class="sec-totals">
+      <span>2026: <strong>11.06M kg</strong></span>
+      <span>2025: <strong>6.49M kg</strong></span>
+      <span class="up" style="font-weight:700">▲ +70.4% vol</span>
+      <span class="dn" style="font-weight:700">▼ −41.6% price</span>
+    </div>
+  </div>
+
+  <div class="fc-grid">
+    <div class="fc fl">
+      <div class="fn">TSF Floor</div>
+      <div class="cmp">
+        <div><div class="yr">2026</div><div class="fv y6b">4.94M <span style="font-size:11px">kg</span></div><div class="fp">$10.09M &nbsp;·&nbsp; $2.041/kg</div></div>
+        <div><div class="yr">2025</div><div class="fv y5">3.97M <span style="font-size:11px">kg</span></div><div class="fp">$13.76M &nbsp;·&nbsp; $3.463/kg</div></div>
+      </div>
+      <div class="tags"><span class="tag tup">▲ +24.4% vol</span><span class="tag tdn">▼ −41.1% price</span></div>
+    </div>
+    <div class="fc fl">
+      <div class="fn">PTSF Floor <span style="font-weight:400;font-size:9px;opacity:.55">= Premier 2025</span></div>
+      <div class="cmp">
+        <div><div class="yr">2026</div><div class="fv y6b">3.34M <span style="font-size:11px">kg</span></div><div class="fp">$6.42M &nbsp;·&nbsp; $1.921/kg</div></div>
+        <div><div class="yr">2025</div><div class="fv y5">2.52M <span style="font-size:11px">kg</span></div><div class="fp">$8.49M &nbsp;·&nbsp; $3.369/kg</div></div>
+      </div>
+      <div class="tags"><span class="tag tup">▲ +32.5% vol</span><span class="tag tdn">▼ −43.0% price</span></div>
+    </div>
+    <div class="fc fl">
+      <div class="fn">ETF Floor <span style="font-weight:400;font-size:9px;opacity:.55">New 2026</span></div>
+      <div class="cmp">
+        <div><div class="yr">2026</div><div class="fv y6b">2.78M <span style="font-size:11px">kg</span></div><div class="fp">$5.62M &nbsp;·&nbsp; $2.019/kg</div></div>
+        <div><div class="yr">2025</div><div class="fv y5">—</div><div class="fp" style="font-size:10px">No 2025 equivalent</div></div>
+      </div>
+      <div class="tags"><span class="tag twn">New floor in 2026</span></div>
+    </div>
+  </div>
+
+  <!-- ====== CONTRACT SECTION ====== -->
+  <div class="sec-hdr">
+    <div class="sec-icon si-c">C</div>
+    <h2>CONTRACT</h2>
+    <div class="sec-totals">
+      <span>2026: <strong>168.9M kg</strong></span>
+      <span>2025: <strong>117.0M kg</strong></span>
+      <span class="up" style="font-weight:700">▲ +44.4% vol</span>
+      <span class="dn" style="font-weight:700">▼ −21.8% price</span>
+    </div>
+  </div>
+
+  <div class="fc-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="fc rg">
+      <div class="fn">HARARE</div>
+      <div class="cmp">
+        <div><div class="yr">2026</div><div class="fv y6g">83.28M <span style="font-size:11px">kg</span></div><div class="fp">$247.2M &nbsp;·&nbsp; $2.968/kg &nbsp;·&nbsp; 31 co</div></div>
+        <div><div class="yr">2025</div><div class="fv y5">67.09M <span style="font-size:11px">kg</span></div><div class="fp">$244.0M &nbsp;·&nbsp; $3.637/kg</div></div>
+      </div>
+      <div class="tags"><span class="tag tup">▲ +24.1%</span><span class="tag tdn">▼ −18.4% price</span></div>
+    </div>
+    <div class="fc rg">
+      <div class="fn">KAROI</div>
+      <div class="cmp">
+        <div><div class="yr">2026</div><div class="fv y6g">34.47M <span style="font-size:11px">kg</span></div><div class="fp">$82.0M &nbsp;·&nbsp; $2.379/kg &nbsp;·&nbsp; 24 co</div></div>
+        <div><div class="yr">2025</div><div class="fv y5">13.25M <span style="font-size:11px">kg</span></div><div class="fp">$39.6M &nbsp;·&nbsp; $2.986/kg</div></div>
+      </div>
+      <div class="tags"><span class="tag tup">▲ +160.2%</span><span class="tag tdn">▼ −20.3% price</span></div>
+    </div>
+    <div class="fc rg">
+      <div class="fn">MVURWI</div>
+      <div class="cmp">
+        <div><div class="yr">2026</div><div class="fv y6g">24.48M <span style="font-size:11px">kg</span></div><div class="fp">$59.9M &nbsp;·&nbsp; $2.449/kg &nbsp;·&nbsp; 20 co</div></div>
+        <div><div class="yr">2025</div><div class="fv y5">16.88M <span style="font-size:11px">kg</span></div><div class="fp">$54.4M &nbsp;·&nbsp; $3.220/kg</div></div>
+      </div>
+      <div class="tags"><span class="tag tup">▲ +45.0%</span><span class="tag tdn">▼ −23.9% price</span></div>
+    </div>
+    <div class="fc rg">
+      <div class="fn">MARONDERA</div>
+      <div class="cmp">
+        <div><div class="yr">2026</div><div class="fv y6g">12.26M <span style="font-size:11px">kg</span></div><div class="fp">$27.9M &nbsp;·&nbsp; $2.278/kg &nbsp;·&nbsp; 17 co</div></div>
+        <div><div class="yr">2025</div><div class="fv y5">9.54M <span style="font-size:11px">kg</span></div><div class="fp">$29.8M &nbsp;·&nbsp; $3.120/kg</div></div>
+      </div>
+      <div class="tags"><span class="tag tup">▲ +28.5%</span><span class="tag tdn">▼ −27.0% price</span></div>
+    </div>
+    <div class="fc rg">
+      <div class="fn">RUSAPE</div>
+      <div class="cmp">
+        <div><div class="yr">2026</div><div class="fv y6g">10.96M <span style="font-size:11px">kg</span></div><div class="fp">$24.5M &nbsp;·&nbsp; $2.235/kg &nbsp;·&nbsp; 18 co</div></div>
+        <div><div class="yr">2025</div><div class="fv y5">7.08M <span style="font-size:11px">kg</span></div><div class="fp">$20.7M &nbsp;·&nbsp; $2.922/kg</div></div>
+      </div>
+      <div class="tags"><span class="tag tup">▲ +54.8%</span><span class="tag tdn">▼ −23.5% price</span></div>
+    </div>
+    <div class="fc rg">
+      <div class="fn">BINDURA</div>
+      <div class="cmp">
+        <div><div class="yr">2026</div><div class="fv y6g">3.44M <span style="font-size:11px">kg</span></div><div class="fp">$7.6M &nbsp;·&nbsp; $2.209/kg &nbsp;·&nbsp; 10 co</div></div>
+        <div><div class="yr">2025</div><div class="fv y5">2.98M <span style="font-size:11px">kg</span></div><div class="fp">$8.9M &nbsp;·&nbsp; $2.997/kg</div></div>
+      </div>
+      <div class="tags"><span class="tag tup">▲ +15.5%</span><span class="tag tdn">▼ −26.3% price</span></div>
+    </div>
+  </div>
+
+  <!-- ====== DAILY PRICE TREND CHART ====== -->
+  <div class="price-line-wrap" style="border-color:#30363d;margin-bottom:18px">
+    <div class="plct"><div class="dl" style="background:var(--chv)"></div>2026 Cumulative Avg Price ($/kg) by Selling Day — Contract &nbsp;·&nbsp; Auction &nbsp;·&nbsp; National</div>
+    <svg viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:200px;display:block">
+<line x1="46" y1="157.5" x2="746" y2="157.5" stroke="#21262d" stroke-width="1"/>
+<text x="42" y="161.0" text-anchor="end" fill="#7d8590" font-size="10">$1.50</text>
+<line x1="46" y1="124.9" x2="746" y2="124.9" stroke="#21262d" stroke-width="1"/>
+<text x="42" y="128.4" text-anchor="end" fill="#7d8590" font-size="10">$2.00</text>
+<line x1="46" y1="92.3" x2="746" y2="92.3" stroke="#21262d" stroke-width="1"/>
+<text x="42" y="95.8" text-anchor="end" fill="#7d8590" font-size="10">$2.50</text>
+<line x1="46" y1="59.7" x2="746" y2="59.7" stroke="#21262d" stroke-width="1"/>
+<text x="42" y="63.2" text-anchor="end" fill="#7d8590" font-size="10">$3.00</text>
+<line x1="46" y1="27.0" x2="746" y2="27.0" stroke="#21262d" stroke-width="1"/>
+<text x="42" y="30.5" text-anchor="end" fill="#7d8590" font-size="10">$3.50</text>
+<line x1="46.0" y1="14" x2="46.0" y2="164" stroke="#21262d" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="46.0" y="178" text-anchor="middle" fill="#7d8590" font-size="10">D1</text>
+<line x1="119.7" y1="14" x2="119.7" y2="164" stroke="#21262d" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="119.7" y="178" text-anchor="middle" fill="#7d8590" font-size="10">D5</text>
+<line x1="211.8" y1="14" x2="211.8" y2="164" stroke="#21262d" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="211.8" y="178" text-anchor="middle" fill="#7d8590" font-size="10">D10</text>
+<line x1="303.9" y1="14" x2="303.9" y2="164" stroke="#21262d" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="303.9" y="178" text-anchor="middle" fill="#7d8590" font-size="10">D15</text>
+<line x1="396.0" y1="14" x2="396.0" y2="164" stroke="#21262d" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="396.0" y="178" text-anchor="middle" fill="#7d8590" font-size="10">D20</text>
+<line x1="488.1" y1="14" x2="488.1" y2="164" stroke="#21262d" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="488.1" y="178" text-anchor="middle" fill="#7d8590" font-size="10">D25</text>
+<line x1="580.2" y1="14" x2="580.2" y2="164" stroke="#21262d" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="580.2" y="178" text-anchor="middle" fill="#7d8590" font-size="10">D30</text>
+<line x1="672.3" y1="14" x2="672.3" y2="164" stroke="#21262d" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="672.3" y="178" text-anchor="middle" fill="#7d8590" font-size="10">D35</text>
+<line x1="746.0" y1="14" x2="746.0" y2="164" stroke="#21262d" stroke-width="1" stroke-dasharray="3,3"/>
+<text x="746.0" y="178" text-anchor="middle" fill="#7d8590" font-size="10">D39</text>
+<line x1="46" y1="164" x2="746" y2="164" stroke="#30363d" stroke-width="1"/>
+<polyline points="64.4,27.8 82.8,53.8 101.3,73.2 119.7,62.5 138.1,62.6 156.5,71.9 174.9,71.1 193.4,73.9 211.8,76.0 230.2,77.7 248.6,75.1 267.1,66.6 285.5,66.9 303.9,65.5 322.3,66.8 340.7,67.4 359.2,67.9 377.6,68.4 396.0,69.8 414.4,70.9 432.8,72.2 451.3,73.0 469.7,74.1 488.1,75.2 506.5,75.0 524.9,75.6 543.4,77.0 561.8,77.7 580.2,78.6 598.6,78.9 617.1,79.0 635.5,79.5 653.9,80.0 672.3,80.3 690.7,80.4 709.2,80.8 727.6,81.2 746.0,81.8" fill="none" stroke="#2d9a4e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="46.0,150.7 64.4,69.4 82.8,84.2 101.3,91.0 119.7,75.7 138.1,73.1 156.5,79.0 174.9,77.3 193.4,79.0 211.8,80.4 230.2,81.6 248.6,78.7 267.1,69.9 285.5,70.2 303.9,68.5 322.3,69.7 340.7,70.2 359.2,70.7 377.6,71.1 396.0,72.4 414.4,73.5 432.8,74.7 451.3,75.4 469.7,76.4 488.1,77.5 506.5,77.3 524.9,78.0 543.4,79.3 561.8,80.0 580.2,81.0 598.6,81.2 617.1,81.4 635.5,82.0 653.9,82.4 672.3,82.7 690.7,82.9 709.2,83.4 727.6,83.8 746.0,84.5" fill="none" stroke="#d4c060" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+<polyline points="46.0,150.7 64.4,151.6 82.8,152.7 101.3,151.3 119.7,149.1 138.1,148.5 156.5,147.5 174.9,146.5 193.4,145.1 211.8,142.5 230.2,140.1 248.6,137.5 267.1,135.9 285.5,132.5 303.9,128.5 322.3,126.3 340.7,124.2 359.2,123.3 377.6,121.5 396.0,120.6 414.4,120.0 432.8,119.5 451.3,118.1 469.7,117.6 488.1,117.6 506.5,117.6 524.9,117.8 543.4,118.4 561.8,118.9 580.2,119.5 598.6,120.0 617.1,120.2 635.5,120.5 653.9,121.0 672.3,121.5 690.7,122.5 709.2,123.0 727.6,123.8 746.0,124.9" fill="none" stroke="#388bfd" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="746.0" cy="81.8" r="4" fill="#2d9a4e"/>
+<circle cx="746.0" cy="84.5" r="4" fill="#d4c060"/>
+<circle cx="746.0" cy="124.9" r="4" fill="#388bfd"/>
+<text x="741.0" y="78.8" text-anchor="end" fill="#2d9a4e" font-size="9.5" font-weight="700">$2.660</text>
+<text x="741.0" y="91.5" text-anchor="end" fill="#d4c060" font-size="9.5" font-weight="700">$2.619</text>
+<text x="741.0" y="121.9" text-anchor="end" fill="#388bfd" font-size="9.5" font-weight="700">$1.999</text>
+<line x1="56" y1="189" x2="76" y2="189" stroke="#2d9a4e" stroke-width="2.5"/>
+<text x="81" y="193" fill="#7d8590" font-size="10">2026 Contract</text>
+<line x1="231" y1="189" x2="251" y2="189" stroke="#d4c060" stroke-width="2.5"/>
+<text x="256" y="193" fill="#7d8590" font-size="10">2026 National</text>
+<line x1="406" y1="189" x2="426" y2="189" stroke="#388bfd" stroke-width="2.5"/>
+<text x="431" y="193" fill="#7d8590" font-size="10">2026 Auction</text>
+</svg>
+  </div>
+
+  <!-- ====== CHEVRON CONTEXT ====== -->
+  <div class="sec-hdr" style="margin-top:22px">
+    <div class="sec-icon si-x">CT</div>
+    <h2>CHEVRON CONTEXT</h2>
+    <div class="sec-totals">
+      <span>2026 total: <strong>1.84M kg</strong></span>
+      <span>2025 total: <strong>390K kg</strong> (Day 1–39)</span>
+      <span class="up" style="font-weight:700">▲ +372.2% vol &nbsp;</span><span class="dn" style="font-weight:700">▼ −44.4% price</span>
+    </div>
+  </div>
+
+  <div class="chv-grid">
+    <!-- Contract -->
+    <div class="cc con">
+      <div class="ch"><span style="width:18px;height:18px;border-radius:4px;background:#0d2918;color:var(--grn);font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center">C</span>Contract</div>
+      <div class="cch">
+        <div class="chc"></div>
+        <div class="chc">2025</div><div class="chc">2026</div><div class="chc">Change</div>
+      </div>
+      <div class="cb">
+        <div class="cr">
+          <div class="cl">Mass</div>
+          <div class="cv"><div class="vy">229,732 kg</div></div>
+          <div class="cv"><div class="vv gv">1,819,446</div></div>
+          <div class="cv"><div class="vv up" style="font-size:12px">▲ +692.1%</div></div>
+        </div>
+        <div class="cr">
+          <div class="cl">Price</div>
+          <div class="cv"><div class="vy">$3.188/kg</div></div>
+          <div class="cv"><div class="vv gv">$1.765</div></div>
+          <div class="cv"><div class="vv dn" style="font-size:12px">▼ −44.6%</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auction -->
+    <div class="cc auc">
+      <div class="ch"><span style="width:18px;height:18px;border-radius:4px;background:#0d1f3c;color:var(--blu);font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center">A</span>Auction</div>
+      <div class="cch">
+        <div class="chc"></div>
+        <div class="chc">2025</div><div class="chc">2026</div><div class="chc">Change</div>
+      </div>
+      <div class="cb">
+        <div class="cr">
+          <div class="cl">Mass</div>
+          <div class="cv"><div class="vy">160,503 kg</div></div>
+          <div class="cv"><div class="vv bv">23,254</div></div>
+          <div class="cv"><div class="vv dn" style="font-size:12px">▼ −85.5%</div></div>
+        </div>
+        <div class="cr">
+          <div class="cl">Price</div>
+          <div class="cv"><div class="vy">$3.137/kg</div></div>
+          <div class="cv"><div class="vv bv">$1.460</div></div>
+          <div class="cv"><div class="vv dn" style="font-size:12px">▼ −53.5%</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total -->
+    <div class="cc tot">
+      <div class="ch"><span style="width:18px;height:18px;border-radius:4px;background:#1a1400;color:var(--chv);font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center">Σ</span>Total</div>
+      <div class="cch">
+        <div class="chc"></div>
+        <div class="chc">2025</div><div class="chc">2026</div><div class="chc">Change</div>
+      </div>
+      <div class="cb">
+        <div class="cr">
+          <div class="cl">Mass</div>
+          <div class="cv"><div class="vy">390,235 kg</div></div>
+          <div class="cv"><div class="vv av">1,842,700</div></div>
+          <div class="cv"><div class="vv up" style="font-size:12px">▲ +372.2%</div></div>
+        </div>
+        <div class="cr">
+          <div class="cl">Price</div>
+          <div class="cv"><div class="vy">$3.167/kg</div></div>
+          <div class="cv"><div class="vv av">$1.761</div></div>
+          <div class="cv"><div class="vv dn" style="font-size:12px">▼ −44.4%</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /p0-body -->
+<div class="p0-foot">TIMB FCV 2026 &nbsp;&middot;&nbsp; Season Day 39 &nbsp;&middot;&nbsp; 04 Mar – 29 Apr 2026 &nbsp;&middot;&nbsp; STRICTLY INTERNAL</div>
+</div><!-- /p0-inner -->
+</div>
+
+<!-- ============================================================
+     PAGE 2 — CHEVRON ANALYTICS
+     ============================================================ -->
+<div class="page" id="p1">
+<div class="p1-paper">
+
+<div class="t-natbar" id="t-natbar"></div>
+<div id="t-kpis"></div>
+<div class="t-body">
+<div id="ra-bd"></div>
+</div>
+<div class="t-foot">CHEVRON TOBACCO COMPANY (PVT) LTD &nbsp;&middot;&nbsp; 2026 BUYING SEASON &nbsp;&nbsp;&middot;&nbsp;&nbsp; STRICTLY INTERNAL &nbsp;&middot;&nbsp; SEASON DAY 39 &nbsp;&middot;&nbsp; 29 APRIL 2026</div>
+</div>
+</div>
+
+<div class="page" id="p2">
+<div class="p2-inner">
+
+<div class="p2-body">
+  <!-- Live data ticker -->
+  <div id="p2-ticker"></div>
+
+  <!-- Auto insight banners (3-col) -->
+  <div id="p2-insights"></div>
+  <!-- Position monitor — full width -->
+  <div id="p2-monitor"></div>
+  <!-- Group cards — 3-col grid -->
+  <div id="p2-members" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px;align-items:start"></div>
+
+</div>
+</div>
+<div class="p2-foot">COMPETITOR INTELLIGENCE &nbsp;&middot;&nbsp; 2026 EXPORT MARKET &nbsp;&middot;&nbsp; TIMB SECTOR ANALYSIS &nbsp;&middot;&nbsp; STRICTLY INTERNAL &nbsp;&middot;&nbsp; SEASON DAY 39</div>
+</div>
+</div>
+
+<script>
+const GC='#21262d';
+Chart.defaults.color='#7d8590';
+Chart.defaults.font.family="'Segoe UI',Arial,sans-serif";
+Chart.defaults.font.size=11;
+const MKTAVG=2.619, CONTR26=168884387;
+
+// ---- CHEVRON DAILY ----
+/* OV_DATA_START */
+const cd=[{"d":6,"m":5984},{"d":7,"m":14790},{"d":8,"m":5028},{"d":9,"m":10025},{"d":10,"m":26915},{"d":11,"m":29602},{"d":12,"m":38599},{"d":13,"m":20513},{"d":14,"m":29855},{"d":15,"m":31500},{"d":16,"m":26652},{"d":17,"m":15836},{"d":18,"m":23779},{"d":19,"m":26560},{"d":20,"m":34473},{"d":21,"m":45166},{"d":22,"m":29608},{"d":23,"m":43286},{"d":24,"m":80755},{"d":25,"m":71351},{"d":26,"m":83845},{"d":27,"m":85503},{"d":28,"m":99219},{"d":29,"m":81112},{"d":30,"m":91348},{"d":31,"m":55659},{"d":32,"m":60165},{"d":33,"m":77137},{"d":34,"m":53508},{"d":35,"m":90921},{"d":36,"m":75888},{"d":37,"m":105681},{"d":38,"m":130444},{"d":39,"m":118739},{"d":40,"m":114322},{"d":41,"m":120543},{"d":42,"m":89726}];
+const DD={"1":"4Mar","2":"5Mar","3":"6Mar","4":"9Mar","5":"10Mar","6":"11Mar","7":"12Mar","8":"13Mar","9":"16Mar","10":"17Mar","11":"18Mar","12":"19Mar","13":"20Mar","14":"23Mar","15":"24Mar","16":"25Mar","17":"26Mar","18":"27Mar","19":"30Mar","20":"31Mar","21":"1Apr","22":"2Apr","23":"7Apr","24":"8Apr","25":"9Apr","26":"10Apr","27":"13Apr","28":"14Apr","29":"15Apr","30":"16Apr","31":"17Apr","32":"20Apr","33":"21Apr","34":"22Apr","35":"23Apr","36":"24Apr","37":"27Apr","38":"28Apr","39":"29Apr","40":"30Apr","41":"4May","42":"5May","43":"6May"};
+/* OV_DATA_END */
+/* RA_DATA_START */
+const D={"KAROI":{"col":"#2D6A4F","crop25":54001067,"target":1800000,"twin":"\ud83d\udd34 TWIN RISK","supply":"\u26a0 LAGGING","price_risk":"\u26a0 UNDERPAYING","pace_gap_pp":-20.1,"price_gap_std":-0.6962,"mkt_mass":[859680,3224490,3224490,39030346],"chev_mass":[0,67694,67694,939106],"mkt_price":[2.2558,2.2849,2.2849,2.3684],"chev_price":[0.0,1.3339,1.3339,1.6721],"price_gap":[null,-0.951,-0.951,-0.6963],"mkt_pace_by_day":[0.0,0.0,0.0,0.332,1.131,1.999,2.832,3.642,4.87,6.263,7.258,8.457,9.367,10.651,12.248,13.82,15.243,16.719,18.277,20.437,22.617,24.418,26.293,28.496,30.89,33.329,36.039,38.694,41.157,43.597,45.873,48.38,50.795,53.183,55.301,57.188,59.235,61.643,63.962,66.306,68.535,70.685,72.277],"chev_pace_by_day":[0.0,0.0,0.0,0.0,0.0,0.0,0.565,0.632,0.933,1.794,2.964,4.408,5.046,5.658,6.724,7.424,7.87,8.675,9.273,10.197,11.675,12.619,13.751,15.633,17.504,19.807,21.636,23.675,25.954,28.056,29.412,31.245,33.516,34.377,36.959,39.366,41.558,44.173,46.59,48.412,50.584,52.173,52.173],"day_labels":["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18","D19","D20","D21","D22","D23","D24","D25","D26","D27","D28","D29","D30","D31","D32","D33","D34","D35","D36","D37","D38","D39","D40","D41","D42","D43"],"weekly":[{"wk":"2026 Mar (D1-19)","mkt":2.391352838577486,"chev":1.80433017886232,"mass":183549,"diff":-0.587,"loss":-107743.0},{"wk":"2026 Apr (D21-43)","mkt":2.3593126324298637,"chev":1.6400099529221488,"mass":755557,"diff":-0.7193,"loss":-543472.0}],"season_loss":-651215,"mkt_std":39030346,"mkt_price_std":2.3684,"peers":[{"n":"Tian Ze Tobacco Company","std":430631,"price":4.0442,"me":false},{"n":"Northern Tobacco","std":4844724,"price":2.6721,"me":false},{"n":"Zimbabwe Leaf Tobacco","std":5836846,"price":2.5961,"me":false},{"n":"Premium Leaf Zimbabwe","std":4787861,"price":2.4898,"me":false},{"n":"Shasha Tobacco P/L","std":2716708,"price":2.4625,"me":false},{"n":"Mashonaland Tobacco Company","std":5094933,"price":2.4405,"me":false},{"n":"Boost, HaIl & Cotton P/L","std":4052846,"price":2.2323,"me":false},{"n":"Victory Tobacco","std":227685,"price":2.1673,"me":false},{"n":"Munakiri Leaf Tobacco","std":909747,"price":2.1655,"me":false},{"n":"Hurudza Leaf","std":440092,"price":2.1128,"me":false},{"n":"Atlas Agri","std":3446527,"price":2.1114,"me":false},{"n":"Ethical Leaf Tobacco","std":398420,"price":2.0971,"me":false},{"n":"Global Leaf","std":362653,"price":2.0711,"me":false},{"n":"Tobacco Corporation","std":391276,"price":2.0407,"me":false},{"n":"Agro leaf Tobacco P/L","std":680056,"price":2.0069,"me":false},{"n":"Leafyard Tobacco Investments","std":837552,"price":2.0016,"me":false},{"n":"Swan Valley Tobacco","std":511718,"price":1.9405,"me":false},{"n":"Sub-Sahara Tobacco P/L","std":568565,"price":1.8965,"me":false},{"n":"Omega Tobacco Company","std":149969,"price":1.8677,"me":false},{"n":"Niche Tobacco","std":158579,"price":1.797,"me":false},{"n":"Agri Abundance Africa","std":947791,"price":1.7813,"me":false},{"n":"Bullion Leaf Zimbabwe P/L","std":210409,"price":1.7673,"me":false},{"n":"Chevron Tobacco Company","std":939106,"price":1.6721,"me":true},{"n":"Afro Asia Tobacco Zimbabwe","std":85652,"price":1.6609,"me":false}]},"RUSAPE":{"col":"#E67E22","crop25":16091025,"target":800000,"twin":"\ud83d\udd34 TWIN RISK","supply":"\u26a0 LAGGING","price_risk":"\u26a0 UNDERPAYING","pace_gap_pp":-23.5,"price_gap_std":-0.4971,"mkt_mass":[277980,938699,938699,12266824],"chev_mass":[0,67309,67309,421874],"mkt_price":[2.0287,2.0098,2.0098,2.2112],"chev_price":[0.0,1.5135,1.5135,1.7141],"price_gap":[null,-0.4963,-0.4963,-0.4971],"mkt_pace_by_day":[0.0,0.557,0.855,1.218,1.643,2.938,3.673,4.19,5.931,7.058,8.513,10.482,11.662,12.89,15.148,17.084,18.694,20.149,21.76,24.094,26.237,28.145,30.746,33.382,35.639,37.761,40.365,43.315,45.938,48.16,50.299,52.238,54.755,57.189,59.541,61.637,63.621,65.883,68.093,70.4,72.474,74.506,76.234],"chev_pace_by_day":[0.0,0.0,0.0,0.0,0.0,0.748,1.326,1.803,2.379,2.655,2.967,3.499,4.248,4.927,5.59,6.659,7.124,7.817,8.569,9.5,10.322,10.484,11.052,13.012,13.615,14.466,16.061,19.122,20.235,22.205,22.954,23.251,25.038,26.744,28.346,29.333,32.588,35.573,39.855,44.321,49.476,52.734,52.734],"day_labels":["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18","D19","D20","D21","D22","D23","D24","D25","D26","D27","D28","D29","D30","D31","D32","D33","D34","D35","D36","D37","D38","D39","D40","D41","D42","D43"],"weekly":[{"wk":"2026 Mar (D1-19)","mkt":2.2797227128706137,"chev":1.7760058945817214,"mass":76002,"diff":-0.5037,"loss":-38282.0},{"wk":"2026 Apr (D21-43)","mkt":2.1794844877178043,"chev":1.7004672248693158,"mass":345872,"diff":-0.479,"loss":-165673.0}],"season_loss":-203955,"mkt_std":12266824,"mkt_price_std":2.2112,"peers":[{"n":"Northern Tobacco","std":4333522,"price":2.5626,"me":false},{"n":"Petrana Trading- Bindura Tobacco Company","std":660783,"price":2.1857,"me":false},{"n":"Norton Leaf Tobacco","std":696630,"price":2.1829,"me":false},{"n":"Munakiri Leaf Tobacco","std":1262960,"price":2.121,"me":false},{"n":"Agritrade","std":770000,"price":2.0965,"me":false},{"n":"Global Leaf","std":211496,"price":2.0833,"me":false},{"n":"Leafyard Tobacco Investments","std":1112905,"price":2.0349,"me":false},{"n":"Agri Abundance Africa","std":1353370,"price":1.9916,"me":false},{"n":"Omega Tobacco Company","std":148441,"price":1.9667,"me":false},{"n":"Sub-Sahara Tobacco P/L","std":506362,"price":1.9321,"me":false},{"n":"Hurudza Leaf","std":111497,"price":1.8686,"me":false},{"n":"Swan Valley Tobacco","std":134526,"price":1.8285,"me":false},{"n":"Niche Tobacco","std":112204,"price":1.7787,"me":false},{"n":"Afro Asia Tobacco Zimbabwe","std":1360,"price":1.755,"me":false},{"n":"Chevron Tobacco Company","std":421874,"price":1.7141,"me":true},{"n":"Aqua Tobacco","std":243328,"price":1.6669,"me":false},{"n":"Bullion Leaf Zimbabwe P/L","std":45223,"price":1.6554,"me":false},{"n":"Tobacco Corporation","std":140343,"price":1.6404,"me":false}]},"BINDURA":{"col":"#3498DB","crop25":7020698,"target":900000,"twin":"\u26a0 WATCH","supply":"\u2713 ON TRACK","price_risk":"\u26a0 UNDERPAYING","pace_gap_pp":19.29,"price_gap_std":-0.3927,"mkt_mass":[34982,182433,182433,3804027],"chev_mass":[0,46678,46678,661220],"mkt_price":[2.0645,1.796,1.796,2.1738],"chev_price":[0.0,1.4699,1.4699,1.7811],"price_gap":[null,-0.3261,-0.3261,-0.3927],"mkt_pace_by_day":[0.0,0.0,0.0,0.0,0.0,0.27,0.559,0.643,1.651,2.551,3.163,3.952,4.855,6.201,7.452,8.34,9.382,10.275,12.251,14.117,16.007,17.687,20.319,22.339,24.811,27.025,29.795,32.06,34.523,36.593,38.159,39.197,40.413,42.025,43.809,44.881,46.648,48.221,50.097,51.585,52.643,53.685,54.183],"chev_pace_by_day":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.024,1.695,2.623,2.96,4.45,5.229,5.841,6.295,6.71,7.796,8.951,10.284,11.541,13.582,17.047,20.699,24.652,29.076,33.301,36.767,40.039,42.846,43.859,45.687,47.771,50.701,52.495,56.959,60.873,64.295,68.282,71.428,73.469,73.469],"day_labels":["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18","D19","D20","D21","D22","D23","D24","D25","D26","D27","D28","D29","D30","D31","D32","D33","D34","D35","D36","D37","D38","D39","D40","D41","D42","D43"],"weekly":[{"wk":"2026 Mar (D1-19)","mkt":2.380623719838642,"chev":1.8435948361469712,"mass":80560,"diff":-0.537,"loss":-43261.0},{"wk":"2026 Apr (D21-43)","mkt":2.1009780617510287,"chev":1.7724485929804017,"mass":580660,"diff":-0.3285,"loss":-190747.0}],"season_loss":-234008,"mkt_std":3804027,"mkt_price_std":2.1738,"peers":[{"n":"Petrana Trading- Bindura Tobacco Company","std":440538,"price":2.4471,"me":false},{"n":"Leafyard Tobacco Investments","std":1072662,"price":2.3689,"me":false},{"n":"Victory Tobacco","std":373676,"price":2.3198,"me":false},{"n":"Global Leaf","std":321340,"price":2.3117,"me":false},{"n":"Omega Tobacco Company","std":137520,"price":2.0343,"me":false},{"n":"Hurudza Leaf","std":339661,"price":2.017,"me":false},{"n":"Tobacco Corporation","std":221577,"price":2.0065,"me":false},{"n":"Bullion Leaf Zimbabwe P/L","std":201122,"price":1.9238,"me":false},{"n":"Niche Tobacco","std":34711,"price":1.9162,"me":false},{"n":"Chevron Tobacco Company","std":661220,"price":1.7811,"me":true}]},"HARARE":{"col":"#9B59B6","crop25":83000000,"target":300000,"twin":"\ud83d\udd34 TWIN RISK","supply":"\u26a0 LAGGING","price_risk":"\u26a0 UNDERPAYING","pace_gap_pp":-71.63,"price_gap_std":-1.1149,"mkt_mass":[2221666,6984889,6984889,93158630],"chev_mass":[0,28588,28588,121837],"mkt_price":[2.5453,2.6218,2.6218,2.9364],"chev_price":[0.0,1.84,1.84,1.8215],"price_gap":[null,-0.7818,-0.7818,-1.1149],"mkt_pace_by_day":[0.0,0.393,0.977,1.65,3.498,5.32,7.182,8.92,10.632,13.013,14.968,18.151,25.575,27.57,32.423,34.897,37.42,39.834,42.189,45.199,48.072,50.826,53.207,56.088,59.323,63.542,66.395,69.9,73.04,76.054,78.741,81.246,83.609,86.129,88.996,92.091,94.656,97.406,100.383,103.824,107.039,109.563,112.239],"chev_pace_by_day":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,2.772,2.772,7.994,9.83,11.702,13.446,16.293,16.293,24.381,27.776,31.083,35.05,40.612,40.612],"day_labels":["D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16","D17","D18","D19","D20","D21","D22","D23","D24","D25","D26","D27","D28","D29","D30","D31","D32","D33","D34","D35","D36","D37","D38","D39","D40","D41","D42","D43"],"weekly":[{"wk":"2026 Mar (D1-19)","mkt":3.1762763971267183,"chev":null,"mass":0,"diff":null,"loss":null},{"wk":"2026 Apr (D21-43)","mkt":2.7746424581013094,"chev":1.8215156315405008,"mass":121837,"diff":-0.9531,"loss":-116123.0}],"season_loss":-116123,"mkt_std":93158630,"mkt_price_std":2.9364,"peers":[{"n":"Tian Ze Tobacco Company","std":13139017,"price":3.9324,"me":false},{"n":"Trowbar Enterprises t/a Maguires","std":1611078,"price":3.6856,"me":false},{"n":"Inter  Continental Leaf Tobacco Co. P/L","std":1170943,"price":3.5922,"me":false},{"n":"Northern Tobacco","std":16899353,"price":3.4894,"me":false},{"n":"Mashonaland Tobacco Company","std":1677240,"price":3.4017,"me":false},{"n":"Zimbabwe Leaf Tobacco","std":10343919,"price":3.1133,"me":false},{"n":"Heritage Tobacco Handlers","std":1108054,"price":2.8355,"me":false},{"n":"Premium Leaf Zimbabwe","std":11663012,"price":2.6813,"me":false},{"n":"Shasha Tobacco P/L","std":1216191,"price":2.5572,"me":false},{"n":"Curverid Tobacco P/L","std":12002944,"price":2.4786,"me":false},{"n":"Atlas Agri","std":3142425,"price":2.4677,"me":false},{"n":"Ethical Leaf Tobacco","std":768577,"price":2.3881,"me":false},{"n":"Petrana Trading- Bindura Tobacco Company","std":232583,"price":2.3358,"me":false},{"n":"Norton Leaf Tobacco","std":505340,"price":2.264,"me":false},{"n":"Agritrade","std":2255143,"price":2.2545,"me":false},{"n":"Majestic Tobacco P/L","std":217679,"price":2.2267,"me":false},{"n":"Agri Abundance Africa","std":592176,"price":2.2109,"me":false},{"n":"Tobacco Corporation","std":155221,"price":2.1927,"me":false},{"n":"Munakiri Leaf Tobacco","std":1090566,"price":2.1857,"me":false},{"n":"Onhardt Tobacco","std":1040589,"price":2.1449,"me":false},{"n":"Karn Leaf Tobacco","std":40220,"price":2.1056,"me":false},{"n":"Victory Tobacco","std":114350,"price":2.084,"me":false},{"n":"Hurudza Leaf","std":99098,"price":2.0168,"me":false},{"n":"Boost, HaIl & Cotton P/L","std":7127110,"price":2.015,"me":false},{"n":"Vision Leaf Tobacco","std":938013,"price":1.9845,"me":false},{"n":"Green Golden Leaf  Tobacco","std":1214170,"price":1.9739,"me":false},{"n":"Horizon T/A Hilfus (PVT) LTD","std":895284,"price":1.9702,"me":false},{"n":"Aqua Tobacco","std":343626,"price":1.9046,"me":false},{"n":"Leafyard Tobacco Investments","std":775359,"price":1.8868,"me":false},{"n":"Servemox","std":657513,"price":1.8847,"me":false},{"n":"Chevron Tobacco Company","std":121837,"price":1.8215,"me":true}]}};
+const cr=[{"r":"KAROI","m":939106},{"r":"RUSAPE","m":421874},{"r":"BINDURA","m":661220},{"r":"HARARE","m":121837}];
+/* RA_DATA_END */
+const chevDailyEl=document.getElementById('chevDaily');
+if(chevDailyEl) new Chart(chevDailyEl,{type:'bar',data:{labels:cd.map(x=>DD[x.d]),datasets:[{label:'kg',data:cd.map(x=>x.m),backgroundColor:cd.map(x=>x.m>=80000?'#f0a500cc':'#f0a50066'),borderColor:'#f0a500',borderWidth:1,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:{color:GC},ticks:{maxRotation:45,font:{size:10}}},y:{grid:{color:GC},ticks:{callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v}}}}});
+
+// ---- CHEVRON REGION DONUT ----
+const chevRegEl=document.getElementById('chevRegDonut');
+if(chevRegEl) new Chart(chevRegEl,{type:'doughnut',data:{labels:cr.map(r=>r.r),datasets:[{data:cr.map(r=>r.m),backgroundColor:['#f0a500','#d08c00','#a06800','#704800'],borderColor:'#0d1117',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:true,cutout:'60%',plugins:{legend:{position:'right',labels:{boxWidth:9,padding:7}}}}});
+const ct=cr.reduce((s,r)=>s+r.m,0);
+const rl=document.getElementById('chevRlist');
+if(rl) cr.forEach(r=>{rl.innerHTML+=`<div class="rrow"><span class="rn">${r.r}</span><div class="rbw"><div class="rb" style="width:${(r.m/cr[0].m*100).toFixed(0)}%"></div></div><span class="rv">${(r.m/1000).toFixed(0)}K <span style="color:var(--mut);font-size:10px">(${(r.m/ct*100).toFixed(1)}%)</span></span></div>`;});
+
+// ---- PRICE COMPARISON ----
+const priceCompEl=document.getElementById('priceComp');
+if(priceCompEl) new Chart(priceCompEl,{type:'bar',data:{labels:['Auct\nMkt','Auct\nChev','Contr\nMkt','Contr\nChev','Total\nMkt','Total\nChev'],datasets:[{label:'2025',data:[3.427,3.201,3.400,2.973,3.402,3.138],backgroundColor:'#388bfd44',borderColor:'#388bfd',borderWidth:1.5,borderRadius:3},{label:'2026',data:[1.999,1.460,2.660,1.765,2.619,1.761],backgroundColor:['#2d9a4e88','#f0a50099','#2d9a4e88','#f0a50099','#2d9a4e88','#f0a500cc'],borderColor:['#2d9a4e','#f0a500','#2d9a4e','#f0a500','#2d9a4e','#f0a500'],borderWidth:1.5,borderRadius:3}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{boxWidth:9,padding:8}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: $${c.parsed.y.toFixed(3)}/kg`}}},scales:{x:{grid:{color:GC},ticks:{maxRotation:0,font:{size:10}}},y:{grid:{color:GC},ticks:{callback:v=>'$'+v.toFixed(2)},min:0,max:4.2}}}});
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMPETITOR INTELLIGENCE — P2  ·  LIVE DATA ENGINE  ·  Commodity Board
+// ══════════════════════════════════════════════════════════════════════════════
+
+/* P2_DATA_START */
+const P2_DATA={
+  "day": 43,
+  "date": "06/05/2026",
+  "generated": "08 May 2026 13:27",
+  "chev": {
+    "m": 1907681,
+    "p": 1.7442,
+    "con_m": 1819446,
+    "con_p": 1.765,
+    "auc_m": 88235,
+    "auc_p": 1.3142
+  },
+  "chan": {
+    "contract": {
+      "comp_m": 10785984,
+      "comp_p": 2.1548,
+      "label": "5 groups active"
+    },
+    "auction": {
+      "comp_m": 7699200,
+      "comp_p": 1.8526,
+      "label": "5 groups active"
+    }
+  },
+  "comp_total": {
+    "m": 18485184,
+    "p": 2.029
+  },
+  "groups": [
+    {
+      "name": "ILT Group",
+      "label": "Dominant Threat",
+      "labelCol": "#9B1C1C",
+      "col": "#1A3560",
+      "rank": 1,
+      "m": 9004155,
+      "p": 2.1287,
+      "con_m": 4350563,
+      "con_p": 2.3891,
+      "auc_m": 4653592,
+      "auc_p": 1.8853,
+      "members": [
+        {
+          "co": "ILT (Core)",
+          "con_m": 1133904,
+          "con_p": 3.5793,
+          "auc_m": 2607819,
+          "auc_p": 1.8402
+        },
+        {
+          "co": "Country Agro",
+          "con_m": 0,
+          "con_p": 0,
+          "auc_m": 2045773,
+          "auc_p": 1.9427
+        },
+        {
+          "co": "Hurudza",
+          "con_m": 1183971,
+          "con_p": 2.0545,
+          "auc_m": 0,
+          "auc_p": 0
+        },
+        {
+          "co": "Vision Leaf",
+          "con_m": 878466,
+          "con_p": 1.9938,
+          "auc_m": 0,
+          "auc_p": 0
+        },
+        {
+          "co": "Servemox",
+          "con_m": 657513,
+          "con_p": 1.8847,
+          "auc_m": 0,
+          "auc_p": 0
+        },
+        {
+          "co": "Aqua",
+          "con_m": 496709,
+          "con_p": 1.8361,
+          "auc_m": 0,
+          "auc_p": 0
+        }
+      ]
+    },
+    {
+      "name": "Ethical Group",
+      "label": "Auction Dominant",
+      "labelCol": "#5B21B6",
+      "col": "#6B3FA0",
+      "rank": 2,
+      "m": 3195479,
+      "p": 1.8542,
+      "con_m": 1216273,
+      "con_p": 1.919,
+      "auc_m": 1979206,
+      "auc_p": 1.8144,
+      "members": [
+        {
+          "co": "Tobacco Corp",
+          "con_m": 1216273,
+          "con_p": 1.919,
+          "auc_m": 811498,
+          "auc_p": 1.8666
+        },
+        {
+          "co": "Ethical Leaf",
+          "con_m": 0,
+          "con_p": 0,
+          "auc_m": 1167708,
+          "auc_p": 1.7781
+        }
+      ]
+    },
+    {
+      "name": "Swan Valley",
+      "label": "Contract Only",
+      "labelCol": "#065F46",
+      "col": "#2D6A4F",
+      "rank": 3,
+      "m": 3064209,
+      "p": 1.9728,
+      "con_m": 3064167,
+      "con_p": 1.9728,
+      "auc_m": 42,
+      "auc_p": 1.35,
+      "members": [
+        {
+          "co": "Sub-Sahara",
+          "con_m": 2040001,
+          "con_p": 1.9836,
+          "auc_m": 42,
+          "auc_p": 1.35
+        },
+        {
+          "co": "Swan Valley",
+          "con_m": 1024166,
+          "con_p": 1.9513,
+          "auc_m": 0,
+          "auc_p": 0
+        }
+      ]
+    },
+    {
+      "name": "Global Leaf",
+      "label": "Steady Contract",
+      "labelCol": "#0F766E",
+      "col": "#16A085",
+      "rank": 4,
+      "m": 1531587,
+      "p": 2.0848,
+      "con_m": 1491044,
+      "con_p": 2.0984,
+      "auc_m": 40543,
+      "auc_p": 1.5821,
+      "members": [
+        {
+          "co": "Global Leaf",
+          "con_m": 1491044,
+          "con_p": 2.0984,
+          "auc_m": 40543,
+          "auc_p": 1.5821
+        }
+      ]
+    },
+    {
+      "name": "Dobre Group",
+      "label": "Auction Only",
+      "labelCol": "#B91C1C",
+      "col": "#C0392B",
+      "rank": 5,
+      "m": 1025817,
+      "p": 1.7887,
+      "con_m": 0,
+      "con_p": 0,
+      "auc_m": 1025817,
+      "auc_p": 1.7887,
+      "members": [
+        {
+          "co": "Rantenta",
+          "con_m": 0,
+          "con_p": 0,
+          "auc_m": 993905,
+          "auc_p": 1.7823
+        },
+        {
+          "co": "Dobre",
+          "con_m": 0,
+          "con_p": 0,
+          "auc_m": 31912,
+          "auc_p": 1.987
+        }
+      ]
+    },
+    {
+      "name": "Shasha Group",
+      "label": "Contract Signal",
+      "labelCol": "#B45309",
+      "col": "#E67E22",
+      "rank": 6,
+      "m": 663937,
+      "p": 2.0189,
+      "con_m": 663937,
+      "con_p": 2.0189,
+      "auc_m": 0,
+      "auc_p": 0,
+      "members": [
+        {
+          "co": "Agro Leaf",
+          "con_m": 663937,
+          "con_p": 2.0189,
+          "auc_m": 0,
+          "auc_p": 0
+        }
+      ]
+    }
+  ]
+};
+/* P2_DATA_END */
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function p2Fmt(n){
+  if(n===null||n===undefined||n===0)return'—';
+  if(n>=1e6)return(n/1e6).toFixed(2)+'M';
+  if(n>=1000)return(n/1000).toFixed(0)+'K';
+  return n.toLocaleString();
+}
+function p2Pp(p){return(p&&p>0)?'$'+p.toFixed(3):'—';}
+function p2Pct(a,b){if(!b)return'—';var d=((a-b)/b*100);return(d>0?'+':'')+d.toFixed(1)+'%';}
+function p2PctN(a,b){if(!b)return null;return(a-b)/b*100;}
+function p2Col(v){return(v===null)?'#888':v>0?'#1A5C35':'#9B1C1C';}
+
+// ── Tab state ─────────────────────────────────────────────────────────────────
+var p2Tab='overall';
+
+function p2ChevD(){
+  var c=P2_DATA.chev;
+  if(p2Tab==='contract') return {m:c.con_m,p:c.con_p};
+  if(p2Tab==='auction')  return {m:c.auc_m,p:c.auc_p};
+  return {m:c.m,p:c.p};
+}
+function p2GrpD(g){
+  if(p2Tab==='contract') return {m:g.con_m,p:g.con_p};
+  if(p2Tab==='auction')  return {m:g.auc_m,p:g.auc_p};
+  return {m:g.m,p:g.p};
+}
+function p2ChanD(){
+  if(p2Tab==='contract') return {m:P2_DATA.chan.contract.comp_m,p:P2_DATA.chan.contract.comp_p,lbl:P2_DATA.chan.contract.label};
+  if(p2Tab==='auction')  return {m:P2_DATA.chan.auction.comp_m, p:P2_DATA.chan.auction.comp_p, lbl:P2_DATA.chan.auction.label};
+  return {m:P2_DATA.comp_total.m,p:P2_DATA.comp_total.p,lbl:'All channels combined'};
+}
+
+// ── Ticker Strip ──────────────────────────────────────────────────────────────
+function p2RenderTicker(){
+  var c=P2_DATA.chev;
+  var ct=P2_DATA.comp_total;
+  var ratio=(ct.m/c.m).toFixed(1);
+  var pGap=((c.p-ct.p)/ct.p*100);
+  var pGapCol=pGap<0?'#CF4B4B':'#2D9A4E';
+  var h='<div style="background:#1a1a2e;border-radius:9px;padding:13px 20px;margin-bottom:2px;display:flex;gap:0;align-items:stretch;flex-wrap:wrap">';
+
+  function tick(label,val,sub,borderRight){
+    var br=borderRight?'border-right:1px solid rgba(255,255,255,.12);margin-right:20px;padding-right:20px;':'';
+    return '<div style="display:flex;flex-direction:column;gap:2px;'+br+'">'
+      +'<div style="font-size:7.5px;font-weight:700;letter-spacing:.1em;color:#666;text-transform:uppercase">'+label+'</div>'
+      +'<div style="font-size:12px;font-weight:800;color:#fff;font-family:monospace;line-height:1.1">'+val+'</div>'
+      +(sub?'<div style="font-size:8px;color:#888">'+sub+'</div>':'')
+      +'</div>';
+  }
+
+  h+=tick('Season Day',P2_DATA.day+' &nbsp;&middot;&nbsp; '+P2_DATA.date,'Updated '+P2_DATA.generated,true);
+  h+=tick('Chevron Position',p2Fmt(c.m)+' kg',p2Pp(c.p)+'/kg',true);
+  h+=tick('Competitor Total',p2Fmt(ct.m)+' kg',p2Pp(ct.p)+'/kg avg',true);
+  h+='<div style="display:flex;gap:24px">';
+  h+='<div style="display:flex;flex-direction:column;gap:2px">';
+  h+='<div style="font-size:7.5px;font-weight:700;letter-spacing:.1em;color:#666;text-transform:uppercase">Volume Ratio</div>';
+  h+='<div style="font-size:20px;font-weight:800;color:#fff;font-family:monospace;line-height:1">'+ratio+'<span style="font-size:9px;color:#555">&thinsp;&times;</span></div>';
+  h+='<div style="font-size:8px;color:#888">competitors vs Chevron</div>';
+  h+='</div>';
+  h+='<div style="display:flex;flex-direction:column;gap:2px">';
+  h+='<div style="font-size:7.5px;font-weight:700;letter-spacing:.1em;color:#666;text-transform:uppercase">Price Gap</div>';
+  h+='<div style="font-size:20px;font-weight:800;color:'+pGapCol+';font-family:monospace;line-height:1">'+(pGap>0?'+':'')+pGap.toFixed(1)+'%</div>';
+  h+='<div style="font-size:8px;color:#888">Chevron vs mkt avg</div>';
+  h+='</div>';
+  h+='</div>';
+  // Tab switcher inline in ticker
+  h+='<div style="margin-left:auto;display:flex;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.2);border-radius:8px;overflow:hidden;flex-shrink:0;align-self:center">';
+  h+='<button id="p2t-con" onclick="p2Switch(\'contract\')" style="padding:10px 22px;font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;border:none;border-right:1px solid rgba(255,255,255,.12);cursor:pointer;background:transparent;color:rgba(255,255,255,.4)">CONTRACT</button>';
+  h+='<button id="p2t-all" onclick="p2Switch(\'overall\')" style="padding:10px 22px;font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;border:none;border-right:1px solid rgba(255,255,255,.12);cursor:pointer;background:#B8860B;color:#fff">OVERALL</button>';
+  h+='<button id="p2t-auc" onclick="p2Switch(\'auction\')" style="padding:10px 22px;font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;border:none;cursor:pointer;background:transparent;color:rgba(255,255,255,.4)">AUCTION</button>';
+  h+='</div>';
+  h+='</div>';
+  document.getElementById('p2-ticker').innerHTML=h;
+}
+
+// ── Auto Insights ─────────────────────────────────────────────────────────────
+function p2RenderInsights(){
+  var c=P2_DATA.chev; var ct=P2_DATA.comp_total;
+  var groups=P2_DATA.groups;
+  var ins=[];
+
+  if(p2Tab==='overall'){
+    var top=groups[0];
+    var ratio=(ct.m/c.m).toFixed(1);
+    var pGap=((c.p-ct.p)/ct.p*100);
+    ins.push({col:'#9B1C1C',icon:'&#9888;',
+      txt:'<strong>'+top.name+'</strong> controls <strong>'+p2Fmt(top.m)+' kg</strong> — '+((top.m/ct.m)*100).toFixed(0)+'% of all competitor volume — operating through <strong>'+top.members.length+' entities</strong> across both channels simultaneously.'});
+    ins.push({col:'#B45309',icon:'&#8595;',
+      txt:'Chevron\'s blended price of <strong>'+p2Pp(c.p)+'</strong> sits <strong>'+Math.abs(pGap).toFixed(1)+'% below</strong> the '+p2Pp(ct.p)+' competitor average. Sustained discount erodes grower loyalty at contract renewal.'});
+    ins.push({col:'#1E5C9B',icon:'&#9724;',
+      txt:'Contract channel = '+((P2_DATA.chan.contract.comp_m/(P2_DATA.chan.contract.comp_m+P2_DATA.chan.auction.comp_m))*100).toFixed(0)+'% of competitor buying. Chevron at <strong>'+((c.con_m/c.m)*100).toFixed(0)+'% contract-aligned</strong> — channel strategy matches market structure.'});
+  } else if(p2Tab==='contract'){
+    var cd=P2_DATA.chan.contract;
+    var pGapC=((c.con_p-cd.comp_p)/cd.comp_p*100);
+    var topCon=groups.slice().sort(function(a,b){return b.con_m-a.con_m;})[0];
+    ins.push({col:'#9B1C1C',icon:'&#9888;',
+      txt:'<strong>'+topCon.name+'</strong> leads contract at <strong>'+p2Fmt(topCon.con_m)+' kg</strong> avg '+p2Pp(topCon.con_p)+' — outbidding Chevron\'s '+p2Pp(c.con_p)+' by <strong>'+Math.abs(((topCon.con_p-c.con_p)/c.con_p*100)).toFixed(1)+'%</strong>.'});
+    ins.push({col:'#B45309',icon:'&#8595;',
+      txt:'Chevron contract rate is <strong>'+Math.abs(pGapC).toFixed(1)+'% below</strong> sector contract avg ('+p2Pp(c.con_p)+' vs '+p2Pp(cd.comp_p)+'). Gap compounds grower defection risk at next renewal cycle.'});
+    ins.push({col:'#1E5C9B',icon:'&#9724;',
+      txt:'Chevron processes <strong>'+((c.con_m/(P2_DATA.chan.contract.comp_m+c.con_m))*100).toFixed(1)+'%</strong> of total identifiable contract volume. Room to grow by closing the price gap and expanding grower base.'});
+  } else {
+    var ad=P2_DATA.chan.auction;
+    var pGapA=((c.auc_p-ad.comp_p)/ad.comp_p*100);
+    var topAuc=groups.slice().sort(function(a,b){return b.auc_m-a.auc_m;})[0];
+    ins.push({col:'#9B1C1C',icon:'&#9888;',
+      txt:'Chevron has only <strong>'+p2Fmt(c.auc_m)+' kg</strong> on the auction floor — just <strong>'+((c.auc_m/c.m)*100).toFixed(1)+'%</strong> of its buying. Absent presence cedes daily grower relationships to rivals.'});
+    ins.push({col:'#B45309',icon:'&#8595;',
+      txt:'Auction floor avg is '+p2Pp(ad.comp_p)+'/kg. Chevron at '+p2Pp(c.auc_p)+' (<strong>'+Math.abs(pGapA).toFixed(1)+'% below</strong>). Tactical bidding above floor avg would signal market commitment without full-season exposure.'});
+    ins.push({col:'#1E5C9B',icon:'&#9724;',
+      txt:'<strong>'+topAuc.name+'</strong> leads auction at '+p2Fmt(topAuc.auc_m)+' kg, building grower loyalty on the floor that compounds into contract pipeline for future seasons.'});
+  }
+
+  var h='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">';
+  ins.forEach(function(i){
+    h+='<div style="background:#fff;border:1px solid #E2DDD5;border-left:3px solid '+i.col+';border-radius:7px;padding:8px 13px;display:flex;align-items:flex-start;gap:9px">';
+    h+='<div style="font-size:11px;flex-shrink:0;color:'+i.col+';margin-top:1px">'+i.icon+'</div>';
+    h+='<div style="font-size:9.5px;font-weight:500;color:#1A1A1A;line-height:1.55">'+i.txt+'</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  document.getElementById('p2-insights').innerHTML=h;
+}
+
+// ── Position Monitor Table ────────────────────────────────────────────────────
+function p2RenderMonitor(){
+  var chev=P2_DATA.chev;
+  var cv=p2ChevD();
+  var chan=p2ChanD();
+  var groups=P2_DATA.groups;
+  var tabLbl=p2Tab==='contract'?'Contract':p2Tab==='auction'?'Auction':'Overall';
+  var maxM=Math.max.apply(null,groups.map(function(g){return p2GrpD(g).m||0;}).concat(cv.m||0));
+
+  var h='<div style="background:#fff;border:1px solid #E2DDD5;border-radius:9px;overflow:hidden;margin-bottom:12px">';
+  // Header bar
+  h+='<div style="background:#1a1a2e;padding:9px 14px;display:flex;align-items:center;justify-content:space-between">';
+  h+='<div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:#fff">POSITION MONITOR — '+tabLbl+'</div>';
+  h+='<div style="font-size:8.5px;color:#666">'+chan.lbl+' &nbsp;&middot;&nbsp; Mkt: <span style="color:#aaa;font-family:monospace">'+p2Fmt(chan.m)+' kg @ '+p2Pp(chan.p)+'</span></div>';
+  h+='</div>';
+  // Column headers
+  var cols='28px 1fr 130px 65px 80px 80px 56px';
+  var chdrStyle='font-size:8px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#888;';
+  h+='<div style="display:grid;grid-template-columns:'+cols+';padding:6px 14px;background:#F6F4F0;border-bottom:1px solid #E2DDD5">';
+  h+='<div style="'+chdrStyle+'">#</div>';
+  h+='<div style="'+chdrStyle+'">Group / Strategy</div>';
+  h+='<div style="'+chdrStyle+';text-align:right">Volume</div>';
+  h+='<div style="'+chdrStyle+';text-align:right">$/kg</div>';
+  h+='<div style="'+chdrStyle+';text-align:right">Δ Chev $</div>';
+  h+='<div style="'+chdrStyle+';text-align:right">Δ Chev vol</div>';
+  h+='<div style="'+chdrStyle+';text-align:center">Channel</div>';
+  h+='</div>';
+
+  function chanPill(g){
+    var hasCon=g.con_m>0,hasAuc=g.auc_m>0;
+    if(hasCon&&hasAuc)  return '<span style="font-size:7px;background:#E8EFF8;color:#1A3560;border-radius:3px;padding:1px 4px;font-weight:700">C+A</span>';
+    if(hasCon)          return '<span style="font-size:7px;background:#EAF5EE;color:#1A5C35;border-radius:3px;padding:1px 4px;font-weight:700">CON</span>';
+    if(hasAuc)          return '<span style="font-size:7px;background:#FDF3F3;color:#9B1C1C;border-radius:3px;padding:1px 4px;font-weight:700">AUC</span>';
+    return '<span style="font-size:7px;color:#aaa">—</span>';
+  }
+
+  groups.forEach(function(g,i){
+    var gd=p2GrpD(g);
+    var hasData=gd.m>0;
+    var pDiff=p2PctN(gd.p, cv.p);
+    var vDiff=p2PctN(gd.m, cv.m);
+    var rowBg=i%2===0?'#fff':'#FDFCFB';
+    var barW=hasData?Math.round(gd.m/maxM*55):0;
+
+    h+='<div style="display:grid;grid-template-columns:'+cols+';padding:8px 14px;background:'+rowBg+';border-bottom:1px solid #F0EDE8;align-items:center">';
+    h+='<div style="font-size:10px;font-weight:800;color:'+g.col+'">'+g.rank+'</div>';
+    h+='<div><div style="font-size:10px;font-weight:700;color:#1A1A1A">'+g.name+'</div>'
+      +'<div style="font-size:7.5px;color:'+(g.labelCol||g.col)+';font-weight:600">'+g.label+'</div></div>';
+    // Volume + micro-bar
+    h+='<div style="text-align:right">';
+    if(hasData){
+      h+='<div style="font-size:10px;font-weight:700;color:#1A1A1A;font-family:monospace">'+p2Fmt(gd.m)+'</div>';
+      h+='<div style="height:3px;background:#EEE;border-radius:2px;margin-top:3px"><div style="height:3px;width:'+barW+'px;background:'+g.col+';border-radius:2px"></div></div>';
+    } else {
+      h+='<div style="font-size:8.5px;color:#bbb">No '+p2Tab+'</div>';
+    }
+    h+='</div>';
+    // $/kg
+    h+='<div style="text-align:right;font-size:10px;font-weight:700;color:#333;font-family:monospace">'+(hasData&&gd.p?p2Pp(gd.p):'—')+'</div>';
+    // Δ price
+    h+='<div style="text-align:right">';
+    if(pDiff!==null&&hasData){
+      var absD=(gd.p-cv.p);
+      h+='<div style="font-size:10px;font-weight:700;color:'+p2Col(pDiff)+';font-family:monospace">'+(pDiff>0?'+':'')+pDiff.toFixed(1)+'%</div>';
+      h+='<div style="font-size:7.5px;color:#888">'+(absD>0?'+':'')+absD.toFixed(3)+'/kg</div>';
+    }else h+='<div style="font-size:9px;color:#ccc">—</div>';
+    h+='</div>';
+    // Δ volume
+    h+='<div style="text-align:right">';
+    if(vDiff!==null&&hasData){
+      h+='<div style="font-size:10px;font-weight:700;color:'+p2Col(vDiff)+';font-family:monospace">'+(vDiff>0?'+':'')+vDiff.toFixed(0)+'%</div>';
+    }else h+='<div style="font-size:9px;color:#ccc">—</div>';
+    h+='</div>';
+    h+='<div style="text-align:center">'+chanPill(g)+'</div>';
+    h+='</div>';
+  });
+
+  // Chevron pinned row
+  var chevBarW=Math.round(cv.m/maxM*55);
+  var chevPillStr=(chev.con_m>0&&chev.auc_m>0)?'C+A':(chev.con_m>0?'CON':'AUC');
+  h+='<div style="display:grid;grid-template-columns:'+cols+';padding:8px 14px;background:#FDF8ED;border-top:2px solid #B8860B;align-items:center">';
+  h+='<div style="font-size:11px;color:#B8860B">&#9670;</div>';
+  h+='<div><div style="font-size:10px;font-weight:700;color:#B8860B">Chevron</div><div style="font-size:7.5px;color:#B8860B;font-weight:600">Your Position</div></div>';
+  h+='<div style="text-align:right"><div style="font-size:10px;font-weight:700;color:#B8860B;font-family:monospace">'+p2Fmt(cv.m)+'</div>'
+    +'<div style="height:3px;background:#EEE;border-radius:2px;margin-top:3px"><div style="height:3px;width:'+chevBarW+'px;background:#B8860B;border-radius:2px"></div></div></div>';
+  h+='<div style="text-align:right;font-size:10px;font-weight:700;color:#B8860B;font-family:monospace">'+p2Pp(cv.p)+'</div>';
+  h+='<div style="text-align:right;font-size:8.5px;color:#B8860B">Baseline</div>';
+  h+='<div style="text-align:right;font-size:8.5px;color:#B8860B">Baseline</div>';
+  h+='<div style="text-align:center"><span style="font-size:7px;border:1px solid #B8860B;color:#B8860B;border-radius:3px;padding:1px 4px;font-weight:700">'+chevPillStr+'</span></div>';
+  h+='</div>';
+  h+='</div>';
+  document.getElementById('p2-monitor').innerHTML=h;
+}
+
+// ── Price vs Volume Quadrant (SVG) ────────────────────────────────────────────
+function p2RenderQuadrant(){
+  var groups=P2_DATA.groups;
+  var cv=p2ChevD();
+
+  var pts=[];
+  groups.forEach(function(g){
+    var gd=p2GrpD(g);
+    if(gd.m>0&&gd.p>0) pts.push({name:g.name.split(' ')[0],m:gd.m,p:gd.p,col:g.col});
+  });
+
+  var W=280,H=210,ml=38,mr=10,mt=12,mb=32;
+  var pw=W-ml-mr,ph=H-mt-mb;
+
+  var allM=pts.map(function(p){return p.m;}).concat(cv.m||0);
+  var allP=pts.map(function(p){return p.p;}).concat(cv.p||0);
+  var maxM=Math.max.apply(null,allM)*1.18;
+  var minP=Math.min.apply(null,allP)*0.94;
+  var maxP=Math.max.apply(null,allP)*1.06;
+  var midM=maxM*0.45;
+  var midP=(minP+maxP)/2;
+
+  function sx(m){return ml+pw*m/maxM;}
+  function sy(p){return mt+ph*(1-(p-minP)/(maxP-minP));}
+  var qx=sx(midM), qy=sy(midP);
+
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block">';
+  // Quadrant fills
+  svg+='<rect x="'+ml+'" y="'+mt+'" width="'+(qx-ml)+'" height="'+(qy-mt)+'" fill="#FDF3F3" opacity=".4"/>';
+  svg+='<rect x="'+qx+'" y="'+mt+'" width="'+(ml+pw-qx)+'" height="'+(qy-mt)+'" fill="#EAF5EE" opacity=".4"/>';
+  svg+='<rect x="'+ml+'" y="'+qy+'" width="'+(qx-ml)+'" height="'+(mt+ph-qy)+'" fill="#F6F4F0" opacity=".5"/>';
+  svg+='<rect x="'+qx+'" y="'+qy+'" width="'+(ml+pw-qx)+'" height="'+(mt+ph-qy)+'" fill="#FEF3C7" opacity=".4"/>';
+  // Labels
+  svg+='<text x="'+(ml+2)+'" y="'+(mt+9)+'" font-size="6.5" fill="#9B1C1C" opacity=".7" font-family="monospace">Premium Niche</text>';
+  svg+='<text x="'+(qx+2)+'" y="'+(mt+9)+'" font-size="6.5" fill="#1A5C35" opacity=".7" font-family="monospace">Premium Agg.</text>';
+  svg+='<text x="'+(ml+2)+'" y="'+(mt+ph-4)+'" font-size="6.5" fill="#888" opacity=".7" font-family="monospace">Marginal</text>';
+  svg+='<text x="'+(qx+2)+'" y="'+(mt+ph-4)+'" font-size="6.5" fill="#B45309" opacity=".7" font-family="monospace">Volume Play</text>';
+  // Grid
+  svg+='<line x1="'+ml+'" y1="'+qy+'" x2="'+(ml+pw)+'" y2="'+qy+'" stroke="#ccc" stroke-width=".5" stroke-dasharray="3,2"/>';
+  svg+='<line x1="'+qx+'" y1="'+mt+'" x2="'+qx+'" y2="'+(mt+ph)+'" stroke="#ccc" stroke-width=".5" stroke-dasharray="3,2"/>';
+  // Axes
+  svg+='<line x1="'+ml+'" y1="'+(mt+ph)+'" x2="'+(ml+pw)+'" y2="'+(mt+ph)+'" stroke="#bbb" stroke-width=".8"/>';
+  svg+='<line x1="'+ml+'" y1="'+mt+'" x2="'+ml+'" y2="'+(mt+ph)+'" stroke="#bbb" stroke-width=".8"/>';
+  // X ticks
+  for(var i=0;i<=3;i++){
+    var tm=maxM*i/3; var tx=sx(tm);
+    svg+='<line x1="'+tx+'" y1="'+(mt+ph)+'" x2="'+tx+'" y2="'+(mt+ph+3)+'" stroke="#bbb" stroke-width=".6"/>';
+    var tlbl=tm>=1e6?(tm/1e6).toFixed(1)+'M':(tm>=1000?(tm/1000).toFixed(0)+'K':'0');
+    svg+='<text x="'+tx+'" y="'+(mt+ph+10)+'" font-size="6.5" fill="#999" text-anchor="middle" font-family="monospace">'+tlbl+'</text>';
+  }
+  // Y ticks
+  for(var j=0;j<=3;j++){
+    var tp=minP+j*(maxP-minP)/3; var ty=sy(tp);
+    svg+='<line x1="'+(ml-2)+'" y1="'+ty+'" x2="'+ml+'" y2="'+ty+'" stroke="#bbb" stroke-width=".6"/>';
+    svg+='<text x="'+(ml-3)+'" y="'+(ty+2.5)+'" font-size="6.5" fill="#999" text-anchor="end" font-family="monospace">$'+tp.toFixed(2)+'</text>';
+  }
+  // Axis labels
+  svg+='<text x="'+(ml+pw/2)+'" y="'+(H-1)+'" font-size="7" fill="#999" text-anchor="middle">Volume (kg)</text>';
+  svg+='<text x="7" y="'+(mt+ph/2)+'" font-size="7" fill="#999" text-anchor="middle" transform="rotate(-90,7,'+(mt+ph/2)+')">$/kg</text>';
+  // Competitor circles
+  pts.forEach(function(p){
+    var px=sx(p.m),py=sy(p.p);
+    svg+='<circle cx="'+px+'" cy="'+py+'" r="6" fill="'+p.col+'" opacity=".82"/>';
+    var lx=px+(px>qx?-7:8), ly=py+(py>qy?8:-4);
+    svg+='<text x="'+lx+'" y="'+ly+'" font-size="7" fill="'+p.col+'" font-family="monospace" font-weight="bold">'+p.name+'</text>';
+  });
+  // Chevron diamond
+  if(cv.m&&cv.p){
+    var cx2=sx(cv.m),cy2=sy(cv.p);
+    svg+='<polygon points="'+cx2+','+(cy2-8)+' '+(cx2+7)+','+cy2+' '+cx2+','+(cy2+8)+' '+(cx2-7)+','+cy2+'" fill="#B8860B"/>';
+    svg+='<text x="'+(cx2+9)+'" y="'+(cy2+3)+'" font-size="7.5" fill="#B8860B" font-family="monospace" font-weight="bold">Chevron</text>';
+  }
+  svg+='</svg>';
+
+  var h='<div style="background:#fff;border:1px solid #E2DDD5;border-radius:9px;overflow:hidden">';
+  h+='<div style="padding:7px 12px;border-bottom:1px solid #F0EDE8;display:flex;justify-content:space-between;align-items:center">';
+  h+='<div style="font-size:9.5px;font-weight:700;color:#1A1A1A;letter-spacing:.04em">PRICE vs VOLUME MAP</div>';
+  h+='<div style="font-size:8px;color:#aaa">'+p2Tab.toUpperCase()+' channel</div>';
+  h+='</div>';
+  h+='<div style="padding:10px 8px 6px">'+svg+'</div>';
+  h+='</div>';
+  document.getElementById('p2-quadrant').innerHTML=h;
+}
+
+// ── Member Drill-down Table ───────────────────────────────────────────────────
+function p2RenderMembers(){
+  var groups=P2_DATA.groups;
+  var cv=p2ChevD();
+  var chev=P2_DATA.chev;
+  var h='';
+  groups.forEach(function(g){
+    var gd=p2GrpD(g);
+    if(!gd.m) return;
+
+    var vRatio=(cv.m>0?(gd.m/cv.m):0);
+    var mktShare=(P2_DATA.comp_total.m>0?(gd.m/P2_DATA.comp_total.m*100):0);
+    var conPct=(gd.m>0?(g.con_m/gd.m*100):0);
+    // Cost advantage: how much more (or less) competitor pays vs Chevron
+    var costAdv=gd.p-cv.p;          // +ve = Chevron pays less = our advantage
+    var costAdvPct=p2PctN(gd.p,cv.p); // % competitor is above Chevron price
+
+    // ── Cost position (Chevron's weapon) ─────────────────────────────────
+    var insCol, costLine;
+    if(costAdv>0.05){
+      insCol='#1A5C35';
+      costLine='We buy <strong>'+(costAdv*100).toFixed(1)+'¢/kg cheaper than '+g.name+'</strong> ('+p2Pp(cv.p)+' vs their '+p2Pp(gd.p)+') — a direct export margin advantage.';
+    } else if(costAdv<-0.05){
+      insCol='#9B1C1C';
+      costLine=g.name+' buys <strong>'+(Math.abs(costAdv)*100).toFixed(1)+'¢/kg cheaper than us</strong> ('+p2Pp(gd.p)+' vs our '+p2Pp(cv.p)+') — they hold the input cost edge.';
+    } else {
+      insCol='#555';
+      costLine='Input cost at parity with Chevron ('+p2Pp(gd.p)+' vs our '+p2Pp(cv.p)+') — competition is on volume scale and supply reliability.';
+    }
+
+    // ── Supply stability ──────────────────────────────────────────────────
+    var supplyLine;
+    if(conPct>=70){
+      supplyLine='<strong>'+conPct.toFixed(0)+'% contracted supply</strong> — stable input pipeline, reliable export fulfilment. '+mktShare.toFixed(1)+'% of tracked market volume.';
+    } else if(conPct>=30){
+      supplyLine='<strong>Mixed channel</strong> ('+conPct.toFixed(0)+'% contract / '+(100-conPct).toFixed(0)+'% auction) — partial stability. Controls '+mktShare.toFixed(1)+'% of export supply.';
+    } else {
+      supplyLine='<strong>Auction-floor dependent</strong> ('+(100-conPct).toFixed(0)+'% spot) — exposed to price volatility; '+mktShare.toFixed(1)+'% of tracked market volume.';
+    }
+
+    var volLine='<strong>'+p2Fmt(gd.m)+' kg</strong> &nbsp;&middot;&nbsp; '+p2Pp(gd.p)+' avg &nbsp;&middot;&nbsp; <strong>'+mktShare.toFixed(1)+'%</strong> of export supply.';
+
+    // ── Card ─────────────────────────────────────────────────────────────
+    h+='<div style="background:#fff;border:1px solid #E2DDD5;border-radius:9px;overflow:hidden">';
+
+    // Card header
+    h+='<div style="background:'+g.col+';padding:9px 14px;display:flex;align-items:center;justify-content:space-between">';
+    h+='<div>';
+    h+='<div style="font-size:11px;font-weight:800;color:#fff;letter-spacing:.02em">'+g.name+'</div>';
+    h+='<div style="font-size:8px;color:rgba(255,255,255,.7);margin-top:1px;font-weight:600;letter-spacing:.05em">'+g.label.toUpperCase()+'</div>';
+    h+='</div>';
+    h+='<div style="text-align:right">';
+    h+='<div style="font-size:13px;font-weight:800;color:#fff;font-family:monospace">'+p2Pp(gd.p)+'</div>';
+    h+='<div style="font-size:9px;color:rgba(255,255,255,.65)">'+p2Fmt(gd.m)+' kg</div>';
+    h+='</div>';
+    h+='</div>';
+
+    // Members rows
+    g.members.forEach(function(m){
+      var mm=p2Tab==='contract'?m.con_m:p2Tab==='auction'?m.auc_m:(m.con_m+m.auc_m);
+      var mp=p2Tab==='contract'?m.con_p:p2Tab==='auction'?m.auc_p:((m.con_m*m.con_p+m.auc_m*m.auc_p)/(m.con_m+m.auc_m)||0);
+      if(!mm) return;
+      var pd=p2PctN(mp, cv.p);
+      h+='<div style="padding:7px 14px;border-bottom:1px solid #F4F1ED;display:flex;align-items:center">';
+      h+='<div style="font-size:10.5px;color:#333;flex:1">'+m.co+'</div>';
+      h+='<div style="font-size:10.5px;font-family:monospace;color:#555;min-width:52px;text-align:right">'+p2Fmt(mm)+'</div>';
+      h+='<div style="font-size:10.5px;font-family:monospace;color:#333;min-width:56px;text-align:right">'+p2Pp(mp)+'</div>';
+      h+='<div style="font-size:10.5px;font-weight:700;font-family:monospace;color:'+p2Col(pd)+';min-width:50px;text-align:right">'+(pd!==null?(pd>0?'+':'')+pd.toFixed(1)+'%':'—')+'</div>';
+      h+='</div>';
+    });
+
+    // ── Insight strip (export market framing) ───────────────────────────────
+    h+='<div style="padding:9px 14px;background:'+insCol+'0f;border-top:2px solid '+insCol+'35">';
+    h+='<div style="font-size:9px;color:#888;margin-bottom:5px">'+volLine+'</div>';
+    h+='<div style="font-size:9.5px;color:'+insCol+';font-weight:700;line-height:1.45;margin-bottom:4px">'+costLine+'</div>';
+    h+='<div style="font-size:9px;color:#555;font-weight:400;line-height:1.45">'+supplyLine+'</div>';
+    h+='</div>';
+
+    h+='</div>'; // end card
+  });
+
+  document.getElementById('p2-members').innerHTML=h;
+}
+
+// ── Signal Board ──────────────────────────────────────────────────────────────
+function p2RenderSignals(){
+  var c=P2_DATA.chev; var ct=P2_DATA.comp_total;
+  var ratio=ct.m/c.m;
+  var pGap=((c.p-ct.p)/ct.p*100);
+  var auctionPct=c.auc_m/c.m*100;
+  var ilt=P2_DATA.groups[0];
+  var iltShare=ilt.m/ct.m*100;
+  var conShare=c.con_m/c.m*100;
+  var mktConShare=P2_DATA.chan.contract.comp_m/(P2_DATA.chan.contract.comp_m+P2_DATA.chan.auction.comp_m)*100;
+
+  var sigs=[];
+  if(Math.abs(pGap)>=20) sigs.push({sev:'CRITICAL',col:'#9B1C1C',bg:'#FDF3F3',
+    title:'Severe Price Discount',
+    body:'Chevron buys '+Math.abs(pGap).toFixed(1)+'% below mkt avg ('+p2Pp(c.p)+' vs '+p2Pp(ct.p)+'). At current gap, rational growers route output to premium buyers at renewal.'});
+  else if(Math.abs(pGap)>=10) sigs.push({sev:'WARNING',col:'#B45309',bg:'#FEF3C7',
+    title:'Price Discount — Monitor',
+    body:'Chevron '+Math.abs(pGap).toFixed(1)+'% below competitor avg. Tolerable now but trending toward grower attrition threshold — review pricing model before next season.'});
+
+  if(ratio>=10) sigs.push({sev:'CRITICAL',col:'#9B1C1C',bg:'#FDF3F3',
+    title:'Volume Concentration Risk',
+    body:'Competitors aggregate '+ratio.toFixed(1)+'\xd7 Chevron volume. Market pricing power vests in rivals — Chevron is price-taker, not setter, in grower negotiations.'});
+  else if(ratio>=5) sigs.push({sev:'WARNING',col:'#B45309',bg:'#FEF3C7',
+    title:'Volume Gap — Structural',
+    body:'Competitors buying '+ratio.toFixed(1)+'\xd7 more than Chevron. Scale gap limits ability to anchor grower relationships and influence crop allocation decisions.'});
+
+  if(auctionPct<5) sigs.push({sev:'WARNING',col:'#B45309',bg:'#FEF3C7',
+    title:'Minimal Auction Presence',
+    body:auctionPct.toFixed(1)+'% of Chevron buying via auction floor. Near-zero floor presence allows rivals to build grower loyalty through daily price discovery signals.'});
+
+  if(iltShare>=40) sigs.push({sev:'CRITICAL',col:'#9B1C1C',bg:'#FDF3F3',
+    title:'ILT Network Dominance',
+    body:'ILT controls '+iltShare.toFixed(0)+'% of competitor volume via '+ilt.members.length+' entities. Cross-entity coordination amplifies buying power beyond individual company signals.'});
+
+  if(conShare>mktConShare) sigs.push({sev:'STABLE',col:'#1A5C35',bg:'#EAF5EE',
+    title:'Contract Channel Aligned',
+    body:'Chevron '+conShare.toFixed(0)+'% contract vs '+mktConShare.toFixed(0)+'% market — operationally protected from auction floor volatility and spot price swings.'});
+
+  var sevBadge={'CRITICAL':'#9B1C1C','WARNING':'#B45309','STABLE':'#1A5C35'};
+  var h='<div style="background:#fff;border:1px solid #E2DDD5;border-radius:9px;overflow:hidden">';
+  h+='<div style="background:#F6F4F0;padding:7px 12px;border-bottom:1px solid #E2DDD5">';
+  h+='<div style="font-size:9.5px;font-weight:700;color:#1A1A1A;letter-spacing:.04em">SIGNAL BOARD</div></div>';
+  sigs.forEach(function(s){
+    h+='<div style="padding:9px 12px;border-bottom:1px solid #F0EDE8;background:'+s.bg+'">';
+    h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">';
+    h+='<span style="font-size:6.5px;font-weight:800;letter-spacing:.07em;background:'+sevBadge[s.sev]+';color:#fff;border-radius:3px;padding:2px 5px">'+s.sev+'</span>';
+    h+='<span style="font-size:9px;font-weight:700;color:#1A1A1A">'+s.title+'</span>';
+    h+='</div>';
+    h+='<div style="font-size:8.5px;color:#555;line-height:1.5">'+s.body+'</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  document.getElementById('p2-signals').innerHTML=h;
+}
+
+// ── Action Items ──────────────────────────────────────────────────────────────
+function p2RenderActions(){
+  var c=P2_DATA.chev; var ct=P2_DATA.comp_total;
+  var pGap=Math.abs(((c.p-ct.p)/ct.p*100)).toFixed(1);
+  var ilt=P2_DATA.groups[0];
+  var aucGap=Math.abs(((c.auc_p-P2_DATA.chan.auction.comp_p)/P2_DATA.chan.auction.comp_p*100)).toFixed(1);
+  var conTarget=(ct.p*0.97).toFixed(3);
+
+  var acts=[
+    {pri:'HIGH',col:'#9B1C1C',title:'Grower Price Review',
+     body:'Close the '+pGap+'% discount to competitor avg. Target blended rate toward $'+conTarget+'/kg. Model marginal cost of retained kg vs grower-loss scenario to set maximum bid threshold.'},
+    {pri:'HIGH',col:'#9B1C1C',title:'ILT Subsidiary Monitoring',
+     body:'Map all '+ilt.members.length+' ILT entities by region and grower segment. Track tender dates and contract renewal windows — particularly '+ilt.members[0].co+' auction activity near Chevron grower zones.'},
+    {pri:'MED',col:'#B45309',title:'Tactical Auction Entry',
+     body:'Increase floor participation toward 10–15% of total buying. Bidding '+aucGap+'% above current floor rate (to $'+(P2_DATA.chev.auc_p*1.07).toFixed(3)+'+) signals market commitment without full-season cost.'},
+    {pri:'MED',col:'#B45309',title:'Contract Innovation',
+     body:'Introduce multi-season contracts with CPI-indexed price escalators. Locks grower loyalty against rival bids while spreading Chevron\'s cost increase across seasons — reduces annual renegotiation exposure.'},
+  ];
+
+  var h='<div style="background:#fff;border:1px solid #E2DDD5;border-radius:9px;overflow:hidden">';
+  h+='<div style="background:#F6F4F0;padding:7px 12px;border-bottom:1px solid #E2DDD5">';
+  h+='<div style="font-size:9.5px;font-weight:700;color:#1A1A1A;letter-spacing:.04em">ACTION ITEMS</div></div>';
+  acts.forEach(function(a){
+    var bg=a.pri==='HIGH'?'#FDF3F3':a.pri==='MED'?'#FFFBEB':'#fff';
+    var col=a.pri==='HIGH'?'#9B1C1C':a.pri==='MED'?'#B45309':'#1A5C35';
+    h+='<div style="padding:9px 12px;border-bottom:1px solid #F0EDE8;background:'+bg+'">';
+    h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">';
+    h+='<span style="font-size:6.5px;font-weight:800;letter-spacing:.07em;background:'+col+';color:#fff;border-radius:3px;padding:2px 5px">'+a.pri+'</span>';
+    h+='<span style="font-size:9px;font-weight:700;color:#1A1A1A">'+a.title+'</span>';
+    h+='</div>';
+    h+='<div style="font-size:8.5px;color:#555;line-height:1.5">'+a.body+'</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+  document.getElementById('p2-actions').innerHTML=h;
+}
+
+// ── Tab Switch ────────────────────────────────────────────────────────────────
+var p2Tab='overall';
+function p2Switch(tab){
+  p2Tab=tab;
+  var map={contract:'con',overall:'all',auction:'auc'};
+  ['con','all','auc'].forEach(function(id){
+    var b=document.getElementById('p2t-'+id);
+    if(b){b.style.background='transparent';b.style.color='rgba(255,255,255,.4)';}
+  });
+  var a=document.getElementById('p2t-'+map[tab]);
+  if(a){a.style.background='#B8860B';a.style.color='#fff';}
+  p2RenderInsights();
+  p2RenderMonitor();
+  p2RenderMembers();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+p2RenderTicker();
+p2Switch('overall');
+
+
+
+
+
+
+
+
+
+function goR(r,el){
+  document.querySelectorAll('#reg-tabs .xb').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+  ['KAROI','RUSAPE','BINDURA','HARARE'].forEach(n=>{
+    const d=document.getElementById('reg-'+n);
+    if(d) d.style.display=n===r?'block':'none';
+  });
+}
+
+const RA_CH={};
+function raMkC(id,cfg){if(RA_CH[id])RA_CH[id].destroy();RA_CH[id]=new Chart(document.getElementById(id),cfg);}
+function raFmt(n){if(n===null||n===undefined)return'—';if(n>=1e6)return(n/1e6).toFixed(2)+'M';if(n>=1000)return(n/1000).toFixed(0)+'K';return Math.round(n).toString();}
+function raFp(p){return p===null||p===undefined?'—':'$'+p.toFixed(2);}
+function raFpp(n){if(n===null)return'—';return(n>=0?'+':'')+n.toFixed(2)+'%';}
+
+// Weighted national price gap — only operating regions, weighted by Chevron volume
+function raWeightedGap(){
+  var regions=['KAROI','RUSAPE','BINDURA','HARARE'];
+  var totalMass=0,totalImpact=0;
+  regions.forEach(function(r){
+    var d=D[r];
+    if(d.chev_mass[3]>0&&d.price_gap_std!==null){
+      totalMass+=d.chev_mass[3];
+      totalImpact+=d.chev_mass[3]*d.price_gap_std;
+    }
+  });
+  return totalMass>0?totalImpact/totalMass:null;
+}
+// Weighted national market avg for regions Chevron operates in
+function raWeightedMktAvg(){
+  var regions=['KAROI','RUSAPE','BINDURA','HARARE'];
+  var totalMass=0,totalValue=0;
+  regions.forEach(function(r){
+    var d=D[r];
+    if(d.chev_mass[3]>0){
+      totalMass+=d.chev_mass[3];
+      totalValue+=d.chev_mass[3]*d.mkt_price_std;
+    }
+  });
+  return totalMass>0?totalValue/totalMass:null;
+}
+// Total season saving across all regions
+function raTotalSaving(){
+  var total=0;
+  ['KAROI','RUSAPE','BINDURA','HARARE'].forEach(function(r){if(D[r].season_loss)total+=(-D[r].season_loss);});
+  return total;
+}
+// Total Chevron STD across all regions
+function raTotalChevSTD(){
+  var total=0;
+  ['KAROI','RUSAPE','BINDURA','HARARE'].forEach(function(r){total+=D[r].chev_mass[3];});
+  return total;
+}
+
+// Render national summary bar (runs once; static across region tabs)
+function raRenderNatBar(){
+  var wg=raWeightedGap();
+  var wma=raWeightedMktAvg();
+  var ts=raTotalSaving();
+  var totalSTD=raTotalChevSTD();
+  var chevBlended=3211351/1819446; // season value / mass
+  var n='';
+  n+='<div class="t-nat-item"><div class="t-nat-val gld">'+raFmt(totalSTD)+'</div><div class="t-nat-lbl">Chevron Total STD</div></div>';
+  n+='<div class="t-nat-divider"></div>';
+  n+='<div class="t-nat-item"><div class="t-nat-val">'+raFp(chevBlended)+'</div><div class="t-nat-lbl">Chev Blended Price</div></div>';
+  n+='<div class="t-nat-divider"></div>';
+  n+='<div class="t-nat-item"><div class="t-nat-val">'+raFp(wma)+'</div><div class="t-nat-lbl">Wtd Regional Mkt Avg</div></div>';
+  n+='<div class="t-nat-divider"></div>';
+  n+='<div class="t-nat-item"><div class="t-nat-val grn">';
+  if(wg!==null)n+='&minus;$'+Math.abs(wg).toFixed(2)+'/kg';else n+='—';
+  n+='</div><div class="t-nat-lbl">Wtd Price Gap (vs regional avg)</div></div>';
+  n+='<div class="t-nat-divider"></div>';
+  n+='<div class="t-nat-item"><div class="t-nat-val grn">+$'+(ts/1000).toFixed(2)+'K</div><div class="t-nat-lbl">Total Season Saving</div></div>';
+  n+='<div class="t-nat-note">Weighted by Chevron purchase volume per region &middot; 4 operating regions</div>';
+  document.getElementById('t-natbar').innerHTML=n;
+}
+
+let raSel='KAROI';
+function raGo(r,el){raSel=r;raRender();}
+
+function raRender(){
+  var d=D[raSel];
+  var isTwin=d.twin.indexOf('TWIN')>=0;
+  var isWatch=d.twin.indexOf('WATCH')>=0;
+  var lastDay=d.mkt_pace_by_day.length-1;
+  var saving=d.season_loss?(-d.season_loss):0;
+  var targetPct=d.chev_mass[3]>0?(d.chev_mass[3]/d.target*100):0;
+  var pricePct=d.chev_price[3]&&d.mkt_price[3]?(d.chev_price[3]/d.mkt_price[3]*100):0;
+  var chevPricePct=d.chev_price[3]&&d.mkt_price[3]?((d.chev_price[3]-d.mkt_price[3])/d.mkt_price[3]*100):null;
+  var sorted=d.peers.slice().sort(function(a,b){return b.price-a.price;});
+  var chevRank=0;for(var i=0;i<sorted.length;i++){if(sorted[i].me){chevRank=i+1;break;}}
+  var mktPacePct=d.mkt_pace_by_day[lastDay];
+  var tp=targetPct;
+  var tpCol=tp>=80?'#1A5C35':tp>=50?'#B8860B':'#9B1C1C';
+  var riskCol=isTwin?'#9B1C1C':isWatch?'#A85600':'#1A5C35';
+
+  // ── KPI ROW ──────────────────────────────────────────────────────────
+  var k='<div class="t-kpirow">';
+  k+='<div class="t-kpi"><div class="t-kpi-lbl">Market Volume (STD)</div><div class="t-kpi-val">'+raFmt(d.mkt_mass[3])+'</div><div class="t-kpi-sub">'+mktPacePct.toFixed(1)+'% of 2025 crop</div><div class="t-prog"><div class="t-prog-f" style="width:'+Math.min(mktPacePct,100).toFixed(0)+'%"></div></div></div>';
+  k+='<div class="t-kpi"><div class="t-kpi-lbl">Chevron Volume (STD)</div><div class="t-kpi-val gld">'+raFmt(d.chev_mass[3])+'</div><div class="t-kpi-sub gld">'+targetPct.toFixed(1)+'% of '+raFmt(d.target)+' target</div><div class="t-prog"><div class="t-prog-f" style="width:'+Math.min(targetPct,100).toFixed(0)+'%"></div></div></div>';
+  k+='<div class="t-kpi"><div class="t-kpi-lbl">Chevron Avg Price</div><div class="t-kpi-val gld">'+raFp(d.chev_price[3])+'</div><div class="t-kpi-sub grn">'+(chevPricePct!==null?chevPricePct.toFixed(1)+'% below region avg':'—')+'</div><div class="t-prog"><div class="t-prog-f" style="width:'+Math.min(pricePct,100).toFixed(0)+'%"></div></div></div>';
+  k+='<div class="t-kpi"><div class="t-kpi-lbl">Price Gap (vs Region Avg)</div><div class="t-kpi-val grn">$'+Math.abs(d.price_gap_std).toFixed(2)+'</div><div class="t-kpi-sub grn">per kg below regional avg</div></div>';
+  k+='<div class="t-kpi"><div class="t-kpi-lbl">Region Saving (D1–39)</div><div class="t-kpi-val grn">+$'+(saving/1000).toFixed(2)+'K</div><div class="t-kpi-sub grn">Rank '+chevRank+' of '+d.peers.length+' contractors</div></div>';
+  k+='</div>';
+  document.getElementById('t-kpis').innerHTML=k;
+
+  var h='<div class="t-main-layout">';
+
+  // ── LEFT SIDEBAR ──────────────────────────────────────────────────────
+  h+='<div class="t-sidebar">';
+
+  h+='<div class="t-sb-section"><div class="t-sb-hd">Region</div>';
+  ['KAROI','RUSAPE','BINDURA','HARARE'].forEach(function(r){
+    var rd=D[r];
+    var sr=rd.peers.slice().sort(function(a,b){return b.price-a.price;});
+    var rk=0;for(var j=0;j<sr.length;j++){if(sr[j].me){rk=j+1;break;}}
+    var rn=r.charAt(0)+r.slice(1).toLowerCase();
+    h+='<div class="t-reg-card'+(r===raSel?' active':'')+'" onclick="raGo(\''+r+'\',this)">';
+    h+='<div class="t-reg-name">'+rn+'</div>';
+    h+='<div class="t-reg-meta">'+raFmt(rd.chev_mass[3])+' kg &middot; '+raFp(rd.chev_price[3])+' &middot; '+rk+'/'+rd.peers.length+'</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+
+  h+='<div class="t-sb-section"><div class="t-sb-hd">Pace vs Target</div>';
+  ['KAROI','RUSAPE','BINDURA','HARARE'].forEach(function(r){
+    var rd=D[r];
+    var cp=rd.chev_mass[3]/rd.target*100;
+    var mp=rd.mkt_pace_by_day[rd.mkt_pace_by_day.length-1];
+    var rn=r.charAt(0)+r.slice(1).toLowerCase();
+    h+='<div class="t-pace-row">';
+    h+='<div style="display:flex;justify-content:space-between"><span class="t-pace-lbl">'+rn+'</span><span class="t-pace-pct" style="color:'+rd.col+'">'+Math.round(cp)+'%</span></div>';
+    h+='<div class="t-pace-track"><div class="t-pace-fill" style="width:'+Math.min(cp,100).toFixed(0)+'%;background:'+rd.col+'"></div></div>';
+    h+='<div class="t-pace-sub">Chev: '+cp.toFixed(1)+'% of target &middot; Mkt: '+mp.toFixed(1)+'% of crop</div>';
+    h+='</div>';
+  });
+  h+='</div>';
+
+  var totalMkt=['KAROI','RUSAPE','BINDURA','HARARE'].reduce(function(s,r){return s+D[r].mkt_mass[3];},0);
+  var totalChev=raTotalChevSTD();
+  var totalSaving=raTotalSaving();
+  h+='<div class="t-sb-section"><div class="t-sb-hd">Season Metrics — Contract (STD)</div>';
+  h+='<div class="t-sb-metric"><span class="t-sb-mlbl">Market total</span><span class="t-sb-mval">'+raFmt(totalMkt)+'</span></div>';
+  h+='<div class="t-sb-metric"><span class="t-sb-mlbl">Chevron total</span><span class="t-sb-mval gld">'+raFmt(totalChev)+'</span></div>';
+  h+='<div class="t-sb-metric"><span class="t-sb-mlbl">Total saving</span><span class="t-sb-mval grn">+$'+(totalSaving/1000).toFixed(2)+'K</span></div>';
+  h+='</div>';
+  h+='<div class="t-sb-section"><div class="t-sb-hd">Auction (National)</div>';
+  h+='<div class="t-sb-metric"><span class="t-sb-mlbl">Market volume</span><span class="t-sb-mval">11.06M kg</span></div>';
+  h+='<div class="t-sb-metric"><span class="t-sb-mlbl">Market avg</span><span class="t-sb-mval">$2.00/kg</span></div>';
+  h+='<div class="t-sb-metric"><span class="t-sb-mlbl">Chev avg</span><span class="t-sb-mval gld">$1.46/kg</span></div>';
+  h+='<div class="t-sb-metric"><span class="t-sb-mlbl">Chev vs market</span><span class="t-sb-mval grn">−$0.54/kg saving</span></div>';
+  h+='</div>';
+
+  h+='</div>'; // close sidebar
+
+  // ── MAIN CONTENT (2 stacked columns) ────────────────────────────────
+  h+='<div class="t-main-content">';
+
+  // Risk strip — slim, full width of main
+  h+='<div class="t-card"><div class="t-card-hd"><div class="t-hd-bar" style="background:'+riskCol+'"></div><div class="t-hd-title">Risk Status — '+raSel+'</div></div>';
+  h+='<div class="t-card-body" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
+  h+='<span class="t-pill '+(isTwin?'red':isWatch?'amb':'grn')+'">'+d.twin+'</span>';
+  h+='<span class="t-pill '+(d.supply.indexOf('LAGGING')>=0?'red':'grn')+'">'+d.supply+'</span>';
+  h+='<span class="t-pill '+(d.price_risk.indexOf('UNDER')>=0?'amb':'grn')+'">'+d.price_risk+'</span>';
+  h+='<span style="font-size:10px;color:#5a5a5a;margin-left:6px">Pace gap: <strong>'+(d.pace_gap_pp>=0?'+':'')+d.pace_gap_pp.toFixed(2)+'pp</strong> vs market&ensp;|&ensp;Price gap: <strong style="color:#1A5C35">−$'+Math.abs(d.price_gap_std).toFixed(2)+'/kg &rarr; saving</strong></span>';
+  h+='</div></div>';
+
+  // Two columns: left stack | right stack
+  h+='<div class="t-grid2">';
+
+  // ── LEFT COLUMN ──
+  h+='<div class="t-col">';
+
+  // Volume & Pace
+  h+='<div class="t-card"><div class="t-card-hd"><div class="t-hd-bar" style="background:#1A3560"></div><div class="t-hd-title">Volume &amp; Pace</div></div>';
+  h+='<div class="t-card-body">';
+  h+='<table class="t-tbl"><thead><tr><th>Metric</th><th class="r">Day</th><th class="r">WTD</th><th class="r">MTD</th><th class="r">STD</th></tr></thead><tbody>';
+  h+='<tr class="mkt"><td>Market (kg)</td>'+d.mkt_mass.map(function(v){return'<td class="r">'+raFmt(v)+'</td>';}).join('')+'</tr>';
+  h+='<tr class="mkt"><td>Mkt Pace %</td>'+d.mkt_mass.map(function(v){return'<td class="r grn">'+(v/d.crop25*100).toFixed(1)+'%</td>';}).join('')+'</tr>';
+  h+='<tr class="chev"><td>Chevron (kg)</td>'+d.chev_mass.map(function(v){return'<td class="r">'+(v>0?raFmt(v):'—')+'</td>';}).join('')+'</tr>';
+  h+='<tr class="chev"><td>Chev Pace %</td>'+d.chev_mass.map(function(v){return'<td class="r '+(v>0?'gld':'mut')+'">'+(v>0?(v/d.target*100).toFixed(1)+'%':'—')+'</td>';}).join('')+'</tr>';
+  h+='<tr class="gap"><td>Gap (pp)</td>'+d.chev_mass.map(function(cv,i){var mv=d.mkt_mass[i];if(!cv||!mv)return'<td class="r mut">—</td>';var g=(cv/d.target*100)-(mv/d.crop25*100);return'<td class="r '+(g>=0?'grn':'red')+'">'+(g>=0?'+':'')+g.toFixed(2)+'pp</td>';}).join('')+'</tr>';
+  h+='</tbody></table>';
+  h+='<div style="margin-top:8px;padding-top:7px;border-top:1px solid #F0EDE8"><div style="display:flex;justify-content:space-between;font-size:9px;color:#7a6e60;margin-bottom:3px"><span>Target: '+raFmt(d.chev_mass[3])+' / '+raFmt(d.target)+'</span><span style="font-weight:700;color:'+tpCol+'">'+tp.toFixed(1)+'%</span></div><div class="t-prog" style="height:5px"><div class="t-prog-f" style="width:'+Math.min(tp,100).toFixed(0)+'%;background:'+tpCol+'"></div></div></div>';
+  h+='</div></div>';
+
+  // Season P&L
+  h+='<div class="t-card"><div class="t-card-hd"><div class="t-hd-bar" style="background:#1A5C35"></div><div class="t-hd-title">Season P&amp;L — '+raSel+'</div></div>';
+  h+='<div class="t-card-body">';
+  h+='<div class="t-save"><div class="t-save-lbl">Region Saving (D1–39)</div><div class="t-save-val">+$'+(saving/1000).toFixed(2)+'K</div><div class="t-save-sub">Paid below regional avg &middot; buying below market</div></div>';
+  h+='<table class="t-tbl"><thead><tr><th>Period</th><th class="r">Reg Avg</th><th class="r">Chev</th><th class="r">Saving</th></tr></thead><tbody>';
+  h+=d.weekly.map(function(w){var ws=w.loss!==null?(-w.loss):null;return'<tr><td class="mut" style="font-size:9px">'+w.wk+'</td><td class="r">'+(w.mkt?raFp(w.mkt):'—')+'</td><td class="r '+(w.chev?'gld':'mut')+'">'+(w.chev?raFp(w.chev):'—')+'</td><td class="r grn">'+(ws!==null?'+$'+(Math.abs(ws)/1000).toFixed(2)+'K':'—')+'</td></tr>';}).join('');
+  h+='</tbody><tfoot><tr class="ttl"><td colspan="3">Total Saving D1–D39</td><td class="r grn">+$'+(saving/1000).toFixed(2)+'K</td></tr></tfoot></table>';
+  h+='</div></div>';
+
+  // Pace Chart
+  h+='<div class="t-card"><div class="t-card-hd"><div class="t-hd-bar" style="background:'+d.col+'"></div><div class="t-hd-title">Pace Momentum — D1 to D39</div></div>';
+  h+='<div class="t-card-body">';
+  h+='<div style="display:flex;gap:12px;font-size:9px;color:#7a6e60;margin-bottom:5px"><span style="display:flex;align-items:center;gap:4px"><span style="width:14px;height:2px;background:'+d.col+';display:inline-block"></span>Market %</span><span style="display:flex;align-items:center;gap:4px"><span style="width:14px;height:2px;background:#9B59B6;display:inline-block"></span>Chevron %</span></div>';
+  h+='<div class="t-chart"><canvas id="ra-pace-chart"></canvas></div>';
+  h+='<div style="font-size:9px;color:#9a8e80;margin-top:5px;font-style:italic">Market = % of 2025 crop ('+raFmt(d.crop25)+' kg). Chevron = % of '+raFmt(d.target)+' target.</div>';
+  h+='</div></div>';
+
+  h+='</div>'; // close left column
+
+  // ── RIGHT COLUMN ──
+  h+='<div class="t-col">';
+
+  // Price Analysis
+  h+='<div class="t-card"><div class="t-card-hd"><div class="t-hd-bar" style="background:#B8860B"></div><div class="t-hd-title">Price Analysis</div></div>';
+  h+='<div class="t-card-body">';
+  h+='<table class="t-tbl"><thead><tr><th>Metric</th><th class="r">Day</th><th class="r">WTD</th><th class="r">MTD</th><th class="r">STD</th></tr></thead><tbody>';
+  h+='<tr class="mkt"><td>Regional Avg</td>'+d.mkt_price.map(function(p){return'<td class="r">'+raFp(p)+'</td>';}).join('')+'</tr>';
+  h+='<tr class="chev"><td>Chevron Price</td>'+d.chev_price.map(function(p){return'<td class="r '+(p?'gld':'mut')+'">'+(p?raFp(p):'—')+'</td>';}).join('')+'</tr>';
+  h+='<tr class="gap"><td>Gap ($/kg)</td>'+d.price_gap.map(function(g){if(g===null)return'<td class="r mut">—</td>';return'<td class="r grn">'+(g>=0?'+':'')+g.toFixed(2)+'</td>';}).join('')+'</tr>';
+  h+='<tr class="gap"><td>Gap %</td>'+d.price_gap.map(function(g,i){if(g===null||!d.mkt_price[i])return'<td class="r mut">—</td>';var pct=g/d.mkt_price[i]*100;return'<td class="r '+(pct<0?'grn':'red')+'">'+(pct>=0?'+':'')+pct.toFixed(1)+'%</td>';}).join('')+'</tr>';
+  h+='</tbody></table>';
+  h+='<div style="margin-top:8px;padding-top:7px;border-top:1px solid #F0EDE8;font-size:10px;color:#5a5a5a">Rank <strong style="color:#1a1a1a">'+chevRank+'</strong> of '+d.peers.length+' (lowest price buyer) &ensp;<span style="color:#1A5C35;font-weight:700">−$'+Math.abs(d.price_gap_std).toFixed(2)+'/kg &rarr; saving</span></div>';
+  h+='</div></div>';
+
+  // Peer Ranking
+  h+='<div class="t-card"><div class="t-card-hd"><div class="t-hd-bar" style="background:#1A3560"></div><div class="t-hd-title">Peer Ranking — '+raSel+' (highest payer first)</div></div>';
+  h+='<div style="overflow-y:auto;max-height:320px">';
+  h+='<table class="t-tbl"><thead><tr><th>#</th><th>Contractor</th><th class="r">STD kg</th><th class="r">$/kg</th><th class="r">vs Avg</th></tr></thead><tbody>';
+  h+=sorted.map(function(c,i){var vra=c.price-d.mkt_price_std;var sign=vra>=0?'+':'−';return'<tr '+(c.me?'class="me"':'')+'><td class="mut">'+(c.me?'&#9733;':i+1)+'</td><td style="'+(c.me?'font-weight:700;':'')+'">'+c.n.substring(0,22)+'</td><td class="r">'+raFmt(c.std)+'</td><td class="r '+(c.me?'gld':'')+'">'+raFp(c.price)+'</td><td class="r"><span class="'+(vra>=0?'grn':'red')+'">'+sign+'$'+Math.abs(vra).toFixed(2)+'</span></td></tr>';}).join('');
+  h+='</tbody><tfoot><tr class="ttl"><td colspan="2">Regional Average</td><td class="r">'+raFmt(d.mkt_std)+'</td><td class="r" style="color:#1A5C35;font-weight:700">'+raFp(d.mkt_price_std)+'</td><td>—</td></tr></tfoot></table>';
+  h+='</div></div>';
+
+  h+='</div>'; // close right column
+  h+='</div>'; // close 2-col grid
+  h+='</div>'; // close main content
+  h+='</div>'; // close main layout
+
+  document.getElementById('ra-bd').innerHTML=h;
+
+  raMkC('ra-pace-chart',{
+    type:'line',
+    data:{
+      labels:d.day_labels,
+      datasets:[
+        {data:d.mkt_pace_by_day,borderColor:d.col,backgroundColor:d.col+'22',fill:true,tension:.3,pointRadius:0,borderWidth:2,label:'Market %'},
+        {data:d.chev_pace_by_day,borderColor:'#9B59B6',fill:false,tension:.2,pointRadius:0,borderWidth:2.5,label:'Chev %',spanGaps:false}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:function(c){return c.dataset.label+': '+c.raw.toFixed(1)+'%';}}}},
+      scales:{
+        x:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:8},maxTicksLimit:10,color:'#7a6e60'}},
+        y:{min:0,max:105,ticks:{font:{size:8},callback:function(v){return v+'%';},color:'#7a6e60'},grid:{color:'rgba(0,0,0,0.05)'}}
+      }
+    }
+  });
+}
+
+raRenderNatBar();
+raRender();
+
+
+
+function st(i){document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('active',j===i));document.querySelectorAll('.page').forEach((p,j)=>p.classList.toggle('active',j===i));}
+</script>
+</body>
+</html>
