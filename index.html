@@ -1636,7 +1636,7 @@ function raRenderNatBar(){
   var wma=raWeightedMktAvg();
   var ts=raTotalSaving();
   var totalSTD=raTotalChevSTD();
-  var chevBlended=3211351/1819446; // season value / mass
+  var chevBlended=(function(){var tm=0,tv=0;['KAROI','RUSAPE','BINDURA','HARARE'].forEach(function(r){var d=D[r];tm+=d.chev_mass[3];tv+=d.chev_mass[3]*d.chev_price[3];});return tm>0?tv/tm:0;})(); // dynamic from RA_DATA
   var n='';
   n+='<div class="t-nat-item"><div class="t-nat-val gld">'+raFmt(totalSTD)+'</div><div class="t-nat-lbl">Chevron Total STD</div></div>';
   n+='<div class="t-nat-divider"></div>';
