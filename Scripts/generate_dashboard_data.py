@@ -351,19 +351,64 @@ def build_ov_data(chev_daily_all, day_dates, max_day):
 
 
 
-# ── 2025 regional contract data (closed season — hardcoded Day 1-39 equivalent) ──
-# Source: 2025 daily FCV xlsx at same point in season; will not change.
-_REG25 = {
-    'HARARE':    {'m': 67090000, 'p': 3.637},
-    'KAROI':     {'m': 13250000, 'p': 2.986},
-    'MVURWI':    {'m': 16880000, 'p': 3.220},
-    'MARONDERA': {'m':  9540000, 'p': 3.120},
-    'RUSAPE':    {'m':  7080000, 'p': 2.922},
-    'BINDURA':   {'m':  2980000, 'p': 2.997},
-}
-# 2025 per-floor auction hardcoded constants
-_TSF25_M  = 3970000;  _TSF25_V  = 13748110.0
-_PTSF25_M = 2520000;  _PTSF25_V = 8489880.0
+CLEANED_2025 = os.path.join(ROOT, "Cleaned Tobacco Market Data 2025.xlsx")
+
+
+def load_2025_comparison(max_day):
+    """
+    Read Cleaned Tobacco Market Data 2025.xlsx and return:
+      reg25: dict region -> {'m': kg, 'v': usd, 'p': $/kg}  for D1..max_day
+      auc25: dict floor  -> {'m': kg, 'v': usd, 'p': $/kg}  for D1..max_day
+    Uses the same day-equivalent slice as the current 2026 season.
+    """
+    import openpyxl as _xl
+    from collections import defaultdict as _dd
+
+    def _n(v):
+        try: return float(v) if v is not None else 0.0
+        except: return 0.0
+
+    try:
+        wb25 = _xl.load_workbook(CLEANED_2025, read_only=True, data_only=True)
+    except Exception as e:
+        print("  WARNING: Cannot load 2025 data: " + str(e))
+        return {}, {}
+
+    # ── Contract by region ────────────────────────────────────────────────────
+    reg25 = _dd(lambda: {'m': 0.0, 'v': 0.0})
+    ws = wb25['Contractor Data 2025']
+    for r in ws.iter_rows(values_only=True, min_row=2):
+        region = str(r[0]).strip() if r[0] else None
+        day    = int(r[2]) if r[2] else 0
+        mass   = _n(r[4]); value = _n(r[5])
+        if region and 1 <= day <= max_day:
+            reg25[region]['m'] += mass
+            reg25[region]['v'] += value
+
+    reg25_out = {}
+    for region, d in reg25.items():
+        p = d['v'] / d['m'] if d['m'] > 0 else 0.0
+        reg25_out[region] = {'m': d['m'], 'v': d['v'], 'p': p}
+
+    # ── Auction by floor ──────────────────────────────────────────────────────
+    # Cols: Auction Floor, Company, Day, % Mass, Ave.(US$/kg), Ave.BaleWeight, Bales Sold, Mass(kg), Value(US$)
+    auc25 = _dd(lambda: {'m': 0.0, 'v': 0.0})
+    ws2 = wb25['Auction Data 2025']
+    for r in ws2.iter_rows(values_only=True, min_row=2):
+        floor = str(r[0]).strip() if r[0] else None
+        day   = int(r[2]) if r[2] else 0
+        mass  = _n(r[7]); value = _n(r[8])
+        if floor and 1 <= day <= max_day and mass > 0:
+            auc25[floor]['m'] += mass
+            auc25[floor]['v'] += value
+
+    auc25_out = {}
+    for floor, d in auc25.items():
+        p = d['v'] / d['m'] if d['m'] > 0 else 0.0
+        auc25_out[floor] = {'m': d['m'], 'v': d['v'], 'p': p}
+
+    wb25.close()
+    return reg25_out, auc25_out
 
 # Extra sheets needed for daily totals (not in REGIONS regional analysis)
 EXTRA_CONTRACT_SHEETS = {'MVURWI': 'MVURWI ', 'MARONDERA': 'MARONDERA'}
@@ -373,7 +418,7 @@ FLOOR_STRIDE = 6
 
 
 # ── Step 6: Extract P0 Season Overview data from xlsx ────────────────────────
-def extract_p0_overview(wb):
+def extract_p0_overview(wb, auc25_data=None):
     def nv(v):
         try: return float(v) if v is not None else 0.0
         except: return 0.0
@@ -398,17 +443,22 @@ def extract_p0_overview(wb):
     out['etf26_m'] = etf26_m; out['etf26_v'] = etf26_v; out['etf26_p'] = safe_price(etf26_m, etf26_v)
     out['ptf26_m'] = ptf26_m; out['ptf26_v'] = ptf26_v; out['ptf26_p'] = safe_price(ptf26_m, ptf26_v)
 
-    # Seasonal Auction summary (2025 auction)
-    ws = wb['Seasonal Auction summary']
-    rows2 = list(ws.iter_rows(values_only=True, min_row=5, max_row=9))
-    auc25_m = nv(rows2[1][2]); auc25_v = nv(rows2[2][2])
+    # 2025 auction: from load_2025_comparison if available, else Seasonal sheet
+    if auc25_data:
+        auc25_m = sum(d['m'] for d in auc25_data.values())
+        auc25_v = sum(d['v'] for d in auc25_data.values())
+    else:
+        ws2 = wb['Seasonal Auction summary']
+        rows2 = list(ws2.iter_rows(values_only=True, min_row=5, max_row=9))
+        auc25_m = nv(rows2[1][2]); auc25_v = nv(rows2[2][2])
 
     out['auc26_m'] = auc26_m; out['auc26_p'] = safe_price(auc26_m, auc26_v)
     out['auc25_m'] = auc25_m; out['auc25_p'] = safe_price(auc25_m, auc25_v)
 
-    # Seasonal Contract Sales (2025 contract)
-    ws = wb['Seasonal Contract Sales']
-    rows3 = list(ws.iter_rows(values_only=True, min_row=5, max_row=9))
+    # 2025 contract: sum from reg25_data (computed in main), else Seasonal sheet
+    # (set after call via out['con25_m'] update in main)
+    ws3 = wb['Seasonal Contract Sales']
+    rows3 = list(ws3.iter_rows(values_only=True, min_row=5, max_row=9))
     con25_m = nv(rows3[1][2]); con25_v = nv(rows3[2][2])
 
     out['con26_m'] = con26_m; out['con26_p'] = safe_price(con26_m, con26_v)
@@ -593,7 +643,7 @@ def build_p0_hdr_html(day, end_date):
 
 
 # ── Step 11: Build P0 overview body HTML ──────────────────────────────────────
-def build_p0_ov_html(ov, day, end_date):
+def build_p0_ov_html(ov, day, end_date, reg25=None, auc25=None):
     ma = {1:'Jan',2:'Feb',3:'Mar',4:'Apr',5:'May',6:'Jun',
           7:'Jul',8:'Aug',9:'Sep',10:'Oct',11:'Nov',12:'Dec'}
     ds = str(end_date.day).zfill(2) + ' ' + ma[end_date.month]
@@ -618,8 +668,15 @@ def build_p0_ov_html(ov, day, end_date):
     tsf26m = ov['tsf26_m']; tsf26v = ov['tsf26_v']; tsf26p = ov['tsf26_p']
     ptf26m = ov['ptf26_m']; ptf26v = ov['ptf26_v']; ptf26p = ov['ptf26_p']
     etf26m = ov['etf26_m']; etf26v = ov['etf26_v']; etf26p = ov['etf26_p']
-    tsf25m = _TSF25_M; tsf25v = _TSF25_V; tsf25p = tsf25v / tsf25m
-    ptf25m = _PTSF25_M; ptf25v = _PTSF25_V; ptf25p = ptf25v / ptf25m
+    # 2025 floor data from load_2025_comparison (TSF=TSF, Premier=PTSF)
+    if auc25:
+        tsf_d  = auc25.get('TSF', {'m': 0, 'v': 0, 'p': 0})
+        ptf_d  = auc25.get('Premier', {'m': 0, 'v': 0, 'p': 0})
+        tsf25m = tsf_d['m']; tsf25v = tsf_d['v']; tsf25p = tsf_d['p']
+        ptf25m = ptf_d['m']; ptf25v = ptf_d['v']; ptf25p = ptf_d['p']
+    else:
+        tsf25m = 3970000; tsf25v = 13748110.0; tsf25p = tsf25v / tsf25m
+        ptf25m = 2520000; ptf25v = 8489880.0;  ptf25p = ptf25v / ptf25m
 
     nat_mc, nat_mc_cls = pct(nat26m, nat25m)
     nat_pc, nat_pc_cls = pct(nat26p, nat25p)
@@ -742,7 +799,7 @@ def build_p0_ov_html(ov, day, end_date):
     h += '  <div class="fc-grid" style="grid-template-columns:repeat(3,1fr)">\n'
     for reg in ov['regions']:
         nm = reg['name']; co = reg['co']; m = reg['m']; v = reg['v']; p = reg['p']
-        r25 = _REG25.get(nm, None)
+        r25 = (reg25 or {}).get(nm, None)
         s  = '    <div class="fc rg">\n      <div class="fn">' + nm + '</div>\n'
         s += '      <div class="cmp">\n'
         s += '        <div><div class="yr">2026</div>'
@@ -854,18 +911,39 @@ def main():
     auc_total = sum(x[0] for x in daily_auc)
     print("    Auction total:  {:,.0f} kg".format(auc_total))
 
+    # Load 2025 day-equivalent comparison data
+    print("  Loading 2025 day-equivalent data (D1-" + str(max_day) + ")...")
+    reg25, auc25 = load_2025_comparison(max_day)
+    if reg25:
+        for rk, rd in sorted(reg25.items()):
+            print("    2025 {}: {:.1f}M kg @ ${:.3f}/kg".format(
+                rk, rd['m']/1e6, rd['p']))
+    # Recompute 2025 contract national total from reg25
+    con25_m_real = sum(d['m'] for d in reg25.values())
+    con25_v_real = sum(d['v'] for d in reg25.values())
+
     # P0 season overview data
     print("  Extracting P0 season overview data...")
-    ov_data = extract_p0_overview(wb)
+    ov_data = extract_p0_overview(wb, auc25_data=auc25)
+    # Override national 2025 contract with day-equivalent sum
+    if con25_m_real > 0:
+        ov_data['con25_m'] = con25_m_real
+        ov_data['con25_p'] = con25_v_real / con25_m_real
+        auc25_total_m = sum(d['m'] for d in auc25.values())
+        auc25_total_v = sum(d['v'] for d in auc25.values())
+        ov_data['nat25_m'] = con25_m_real + auc25_total_m
+        ov_data['nat25_p'] = (con25_v_real + auc25_total_v) / ov_data['nat25_m'] if ov_data['nat25_m'] > 0 else 0
     print("  National 2026: {:.1f}M kg @ ${:.3f}/kg".format(
         ov_data['nat26_m']/1e6, ov_data['nat26_p']))
+    print("  National 2025: {:.1f}M kg @ ${:.3f}/kg".format(
+        ov_data['nat25_m']/1e6, ov_data['nat25_p']))
 
     end_date = day_dates.get(max_day)
     if end_date is None:
         from datetime import date as _date; end_date = _date.today()
 
     p0_hdr_html   = build_p0_hdr_html(max_day, end_date)
-    p0_ov_html    = build_p0_ov_html(ov_data, max_day, end_date)
+    p0_ov_html    = build_p0_ov_html(ov_data, max_day, end_date, reg25=reg25, auc25=auc25)
     p0_chart_html = build_price_chart_content(daily_con, daily_auc, max_day)
 
     print("  Injecting into dashboard HTML...")
