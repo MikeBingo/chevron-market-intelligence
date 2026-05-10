@@ -750,7 +750,7 @@ def build_p0_ov_html(ov, day, end_date):
         s += '<div class="fp">' + fmt_v(v) + ' &nbsp;&middot;&nbsp; ' + fmt_p(p) + '/kg &nbsp;&middot;&nbsp; ' + str(co) + ' co</div></div>\n'
         if r25:
             r25m = r25['m']; r25p = r25['p']; r25v = r25m * r25p
-            s += '        <div><div class="yr">2025 D1&ndash;39</div>'
+            s += '        <div><div class="yr">2025</div>'
             s += '<div class="fv y5">' + fmt_m(r25m) + ' <span style="font-size:11px">kg</span></div>'
             s += '<div class="fp">' + fmt_v(r25v) + ' &nbsp;&middot;&nbsp; ' + fmt_p(r25p) + '/kg</div></div>\n'
             mc2, mc_cls2 = pct(m, r25m)
