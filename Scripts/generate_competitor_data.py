@@ -267,20 +267,77 @@ def extract(path, day):
         'groups': out_groups,
     }
 
-# 2025 Day 1-39 Chevron reference (fixed baseline)
-CHEV_REF = {
-    'con_m': 229732,  'con_p': 3.188,
-    'auc_m': 160503,  'auc_p': 3.137,
-    'tot_m': 390235,  'tot_p': 3.167,
-}
+CLEANED_2025 = os.path.join(ROOT, "Cleaned Tobacco Market Data 2025.xlsx")
 
-
-# 2025 Day 1-39 Chevron reference (fixed baseline)
-CHEV_REF = {
-    'con_m': 229732,  'con_p': 3.188,
-    'auc_m': 160503,  'auc_p': 3.137,
-    'tot_m': 390235,  'tot_p': 3.167,
-}
+def load_chev_2025(max_day):
+    """Load Chevron 2025 contract + auction figures up to max_day from cleaned 2025 data."""
+    ref = {'con_m': 0, 'con_v': 0, 'auc_m': 0, 'auc_v': 0}
+    try:
+        wb25 = openpyxl.load_workbook(CLEANED_2025, read_only=True, data_only=True)
+        # Contract: Region[0], Company[1], Day[2], Date[3], Mass[4], Value[5]
+        if 'Contractor Data 2025' in wb25.sheetnames:
+            ws = wb25['Contractor Data 2025']
+            for i, row in enumerate(ws.iter_rows(values_only=True)):
+                if i == 0:
+                    continue
+                company = str(row[1] or '').strip()
+                if 'chevron' not in company.lower():
+                    continue
+                day = row[2]
+                if day is None:
+                    continue
+                try:
+                    day = int(day)
+                except (ValueError, TypeError):
+                    continue
+                if day < 1 or day > max_day:
+                    continue
+                try:
+                    ref['con_m'] += float(row[4] or 0)
+                    ref['con_v'] += float(row[5] or 0)
+                except (TypeError, ValueError):
+                    pass
+        # Auction: Floor[0], Company[1], Day[2], %[3], Price[4], BaleWt[5], Bales[6], Mass[7], Value[8]
+        if 'Auction Data 2025' in wb25.sheetnames:
+            ws = wb25['Auction Data 2025']
+            for i, row in enumerate(ws.iter_rows(values_only=True)):
+                if i == 0:
+                    continue
+                company = str(row[1] or '').strip()
+                if 'chevron' not in company.lower():
+                    continue
+                day = row[2]
+                if day is None:
+                    continue
+                try:
+                    day = int(day)
+                except (ValueError, TypeError):
+                    continue
+                if day < 1 or day > max_day:
+                    continue
+                try:
+                    ref['auc_m'] += float(row[7] or 0)
+                    ref['auc_v'] += float(row[8] or 0)
+                except (TypeError, ValueError):
+                    pass
+        wb25.close()
+    except Exception as e:
+        print('Warning: could not load Chevron 2025 data: {}'.format(e))
+        # Fall back to D1-39 hardcoded values
+        return {'con_m': 229732, 'con_p': 3.188, 'auc_m': 160503, 'auc_p': 3.137,
+                'tot_m': 390235, 'tot_p': 3.167}
+    con_m = ref['con_m']
+    con_p = ref['con_v'] / con_m if con_m else 0
+    auc_m = ref['auc_m']
+    auc_p = ref['auc_v'] / auc_m if auc_m else 0
+    tot_m = con_m + auc_m
+    tot_v = ref['con_v'] + ref['auc_v']
+    tot_p = tot_v / tot_m if tot_m else 0
+    return {
+        'con_m': round(con_m), 'con_p': round(con_p, 3),
+        'auc_m': round(auc_m), 'auc_p': round(auc_p, 3),
+        'tot_m': round(tot_m), 'tot_p': round(tot_p, 3),
+    }
 
 def _pct(n, d):
     return (n - d) / d * 100 if d else 0.0
@@ -337,8 +394,10 @@ def _card_html(letter, label, bg_col, txt_col, m25, p25, m26, p26, m_chg, p_chg,
     lines.append('    </div>')
     return '\n'.join(lines)
 
-def build_chev_context_html(chev, day, date_str):
-    r = CHEV_REF
+def build_chev_context_html(chev, day, date_str, ref=None):
+    r = ref if ref is not None else {'con_m': 229732, 'con_p': 3.188,
+                                      'auc_m': 160503, 'auc_p': 3.137,
+                                      'tot_m': 390235, 'tot_p': 3.167}
     con_m_chg = _pct(chev['con_m'], r['con_m'])
     con_p_chg = _pct(chev['con_p'], r['con_p'])
     auc_m_chg = _pct(chev['auc_m'], r['auc_m'])
@@ -369,7 +428,8 @@ def build_chev_context_html(chev, day, date_str):
     lines.append('    <h2>CHEVRON CONTEXT</h2>')
     lines.append('    <div class="sec-totals">')
     lines.append('      <span>2026 total: <strong>{}</strong></span>'.format(tot_disp))
-    lines.append('      <span>2025 total: <strong>390K kg</strong> (Day 1–39)</span>')
+    lines.append('      <span>2025 total: <strong>{}</strong> (Day 1–{})</span>'.format(
+          '{:.0f}K kg'.format(r['tot_m'] / 1e3), day))
     lines.append('      <span class="{}" style="font-weight:700">{} vol &nbsp;</span>'
                  '<span class="{}" style="font-weight:700">{} price</span>'.format(
                      vol_cls, vol_arrow, pr_cls, pr_arrow))
@@ -409,7 +469,8 @@ def inject_into_dashboard(data):
     ok_flags.append(('P2_DATA', ok))
 
     # 2. P0 Chevron context HTML block
-    chev_html = build_chev_context_html(data['chev'], data['day'], data['date'])
+    chev_ref  = load_chev_2025(data['day'])
+    chev_html = build_chev_context_html(data['chev'], data['day'], data['date'], ref=chev_ref)
     html, ok = _inject_block(html, '<!-- P0_CHEV_START -->', '<!-- P0_CHEV_END -->', chev_html)
     ok_flags.append(('P0_CHEV', ok))
 
@@ -443,6 +504,7 @@ def inject_into_dashboard(data):
     return all(ok for _, ok in ok_flags)
 
 if __name__ == '__main__':
+    import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--day', type=int, default=None)
     parser.add_argument('--print-only', action='store_true')
