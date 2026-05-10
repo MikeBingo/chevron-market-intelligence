@@ -351,113 +351,240 @@ def build_ov_data(chev_daily_all, day_dates, max_day):
 
 
 
+# ── 2025 regional contract data (closed season — hardcoded Day 1-39 equivalent) ──
+# Source: 2025 daily FCV xlsx at same point in season; will not change.
+_REG25 = {
+    'HARARE':    {'m': 67090000, 'p': 3.637},
+    'KAROI':     {'m': 13250000, 'p': 2.986},
+    'MVURWI':    {'m': 16880000, 'p': 3.220},
+    'MARONDERA': {'m':  9540000, 'p': 3.120},
+    'RUSAPE':    {'m':  7080000, 'p': 2.922},
+    'BINDURA':   {'m':  2980000, 'p': 2.997},
+}
+# 2025 per-floor auction hardcoded constants
+_TSF25_M  = 3970000;  _TSF25_V  = 13748110.0
+_PTSF25_M = 2520000;  _PTSF25_V = 8489880.0
+
+# Extra sheets needed for daily totals (not in REGIONS regional analysis)
+EXTRA_CONTRACT_SHEETS = {'MVURWI': 'MVURWI ', 'MARONDERA': 'MARONDERA'}
+AUCTION_FLOOR_SHEETS  = ['TSF Daily Auction sales', 'ETF Daily Auction sales',
+                          'PTSF Daily Auction sales']
+FLOOR_STRIDE = 6
+
+
 # ── Step 6: Extract P0 Season Overview data from xlsx ────────────────────────
-# 2025 per-floor auction hardcoded constants (closed season, will not change)
-_TSF25_M  = 3970000;  _TSF25_V  = 13748.11 * 1000  # 3.97M kg, $3.463/kg
-_PTSF25_M = 2520000;  _PTSF25_V = 8489.88 * 1000   # 2.52M kg, $3.369/kg
-# ETF had no 2025 equivalent
-
 def extract_p0_overview(wb):
-    """Read season-level overview data from the workbook.
-
-    Returns a dict with:
-      nat26_m, nat26_p, nat25_m, nat25_p  (national crop)
-      con26_m, con26_p, con25_m, con25_p  (contract)
-      auc26_m, auc26_p, auc25_m, auc25_p  (auction)
-      tsf26_m, tsf26_v, tsf26_p           (TSF floor 2026)
-      ptf26_m, ptf26_v, ptf26_p           (PTSF floor 2026)
-      etf26_m, etf26_v, etf26_p           (ETF floor 2026)
-      regions: list of {name, co, m, v, p} 2026 only
-    """
-    def n(v):
+    def nv(v):
         try: return float(v) if v is not None else 0.0
         except: return 0.0
-
-    def safe_price(m, v):
-        return v / m if m > 0 else 0.0
+    def safe_price(m, val):
+        return val / m if m > 0 else 0.0
 
     out = {}
 
-    # ── Auction and Contract sheet (national + per-floor 2026) ────────────────
+    # Auction and Contract sheet (per-floor 2026 + national 2025)
     ws = wb['Auction and Contract']
     rows = list(ws.iter_rows(values_only=True, min_row=5, max_row=10))
-    # row[0] = header (SEASONAL, TSF, ESF, PTF, TOTAL AUCTION, TOTAL CONTRACT, TOTAL 2026, TOTAL 2025, ...)
-    # row[1] = mass row
-    # row[2] = value row
-    # row[3] = avg price row
-    mass_row  = rows[1]  # index 1 = row 6
-    val_row   = rows[2]  # index 2 = row 7
-    # Columns: 0=label, 1=TSF, 2=ESF(ETF), 3=PTF(PTSF), 4=TOTAL_AUCTION, 5=TOTAL_CONTRACT, 6=TOTAL_2026, 7=TOTAL_2025
-    tsf26_m = n(mass_row[1]);  tsf26_v = n(val_row[1])
-    etf26_m = n(mass_row[2]);  etf26_v = n(val_row[2])
-    ptf26_m = n(mass_row[3]);  ptf26_v = n(val_row[3])
-    auc26_m = n(mass_row[4]);  auc26_v = n(val_row[4])
-    con26_m = n(mass_row[5]);  con26_v = n(val_row[5])
-    nat26_m = n(mass_row[6]);  nat26_v = n(val_row[6])
-    nat25_m = n(mass_row[7]);  nat25_v = n(val_row[7])
+    mass_row = rows[1]; val_row = rows[2]
+    tsf26_m = nv(mass_row[1]); tsf26_v = nv(val_row[1])
+    etf26_m = nv(mass_row[2]); etf26_v = nv(val_row[2])
+    ptf26_m = nv(mass_row[3]); ptf26_v = nv(val_row[3])
+    auc26_m = nv(mass_row[4]); auc26_v = nv(val_row[4])
+    con26_m = nv(mass_row[5]); con26_v = nv(val_row[5])
+    nat26_m = nv(mass_row[6]); nat26_v = nv(val_row[6])
+    nat25_m = nv(mass_row[7]); nat25_v = nv(val_row[7])
 
-    out['tsf26_m'] = tsf26_m;  out['tsf26_v'] = tsf26_v;  out['tsf26_p'] = safe_price(tsf26_m, tsf26_v)
-    out['etf26_m'] = etf26_m;  out['etf26_v'] = etf26_v;  out['etf26_p'] = safe_price(etf26_m, etf26_v)
-    out['ptf26_m'] = ptf26_m;  out['ptf26_v'] = ptf26_v;  out['ptf26_p'] = safe_price(ptf26_m, ptf26_v)
+    out['tsf26_m'] = tsf26_m; out['tsf26_v'] = tsf26_v; out['tsf26_p'] = safe_price(tsf26_m, tsf26_v)
+    out['etf26_m'] = etf26_m; out['etf26_v'] = etf26_v; out['etf26_p'] = safe_price(etf26_m, etf26_v)
+    out['ptf26_m'] = ptf26_m; out['ptf26_v'] = ptf26_v; out['ptf26_p'] = safe_price(ptf26_m, ptf26_v)
 
-    # ── Seasonal Auction summary (2026 + 2025) ────────────────────────────────
+    # Seasonal Auction summary (2025 auction)
     ws = wb['Seasonal Auction summary']
-    rows = list(ws.iter_rows(values_only=True, min_row=5, max_row=9))
-    auc_mass = rows[1];  auc_val = rows[2]
-    auc26_m2 = n(auc_mass[1]);  auc26_v2 = n(auc_val[1])
-    auc25_m  = n(auc_mass[2]);  auc25_v  = n(auc_val[2])
-    # Prefer direct total from Auction and Contract sheet; use Seasonal for 2025
-    out['auc26_m'] = auc26_m if auc26_m > 0 else auc26_m2
-    out['auc26_p'] = safe_price(out['auc26_m'], auc26_v)
-    out['auc25_m'] = auc25_m
-    out['auc25_p'] = safe_price(auc25_m, auc25_v)
+    rows2 = list(ws.iter_rows(values_only=True, min_row=5, max_row=9))
+    auc25_m = nv(rows2[1][2]); auc25_v = nv(rows2[2][2])
 
-    # ── Seasonal Contract Sales (2026 + 2025) ─────────────────────────────────
+    out['auc26_m'] = auc26_m; out['auc26_p'] = safe_price(auc26_m, auc26_v)
+    out['auc25_m'] = auc25_m; out['auc25_p'] = safe_price(auc25_m, auc25_v)
+
+    # Seasonal Contract Sales (2025 contract)
     ws = wb['Seasonal Contract Sales']
-    rows = list(ws.iter_rows(values_only=True, min_row=5, max_row=9))
-    con_mass = rows[1];  con_val = rows[2]
-    con25_m = n(con_mass[2]);  con25_v = n(con_val[2])
-    out['con26_m'] = con26_m
-    out['con26_p'] = safe_price(con26_m, con26_v)
-    out['con25_m'] = con25_m
-    out['con25_p'] = safe_price(con25_m, con25_v)
+    rows3 = list(ws.iter_rows(values_only=True, min_row=5, max_row=9))
+    con25_m = nv(rows3[1][2]); con25_v = nv(rows3[2][2])
 
-    # ── National totals (combine contract + auction 2026; use Auction and Contract for 2025) ──
-    out['nat26_m'] = nat26_m
-    out['nat26_p'] = safe_price(nat26_m, nat26_v)
-    out['nat25_m'] = nat25_m
-    out['nat25_p'] = safe_price(nat25_m, nat25_v)
+    out['con26_m'] = con26_m; out['con26_p'] = safe_price(con26_m, con26_v)
+    out['con25_m'] = con25_m; out['con25_p'] = safe_price(con25_m, con25_v)
 
-    # ── SELLING POINT SUMMARY (regional 2026 only) ────────────────────────────
+    out['nat26_m'] = nat26_m; out['nat26_p'] = safe_price(nat26_m, nat26_v)
+    out['nat25_m'] = nat25_m; out['nat25_p'] = safe_price(nat25_m, nat25_v)
+
+    # SELLING POINT SUMMARY (regional 2026)
     ws = wb['SELLING POINT SUMMARY']
-    rows = list(ws.iter_rows(values_only=True, min_row=5, max_row=20))
-    # header row[0] = (SELLING POINT, No. OF CONTRACTORS, MASS (KG), VALUE (US$), AVE (US$/KG))
-    regions = []
+    rows4 = list(ws.iter_rows(values_only=True, min_row=5, max_row=20))
     EXCLUDE = {'GRAND TOTAL', 'Previous', 'Main Menu', 'Next', 'SELLING POINT', 'MUTOKO'}
-    for r in rows[1:]:  # skip header
+    regions = []
+    for r in rows4[1:]:
         if r[0] is None: continue
         nm = str(r[0]).strip()
         if nm in EXCLUDE or nm == '': continue
-        co = int(n(r[1])); m = n(r[2]); v = n(r[3]); p = n(r[4])
+        co = int(nv(r[1])); m = nv(r[2]); v = nv(r[3]); p = nv(r[4])
         if m > 0:
             regions.append({'name': nm, 'co': co, 'm': m, 'v': v, 'p': p})
     out['regions'] = regions
-
     return out
 
 
-# ── Step 7: Build P0 header HTML ─────────────────────────────────────────────
+# ── Step 7: Read extra contract sheet daily totals ────────────────────────────
+def read_region_daily_totals(ws, max_day, stride=10):
+    """Return list of (mass, value) per day using TOTAL row only."""
+    rows = list(ws.iter_rows(values_only=True))
+    total_row = None
+    for r in rows:
+        if r[0] and str(r[0]).strip() == 'TOTAL':
+            total_row = r; break
+    if total_row is None:
+        return [(0.0, 0.0)] * max_day
+    result = []
+    for d in range(max_day):
+        c = 1 + d * stride
+        m = n(total_row[c]) if c < len(total_row) else 0.0
+        v = n(total_row[c+1]) if c+1 < len(total_row) else 0.0
+        result.append((m, v))
+    return result
+
+
+# ── Step 8: Read auction floor daily totals ───────────────────────────────────
+def read_auction_floors_daily(wb, max_day):
+    """Sum daily mass+value across all 3 floor sheets (STRIDE=6)."""
+    totals = [(0.0, 0.0)] * max_day
+    for sh in AUCTION_FLOOR_SHEETS:
+        if sh not in wb.sheetnames: continue
+        ws = wb[sh]
+        rows = list(ws.iter_rows(values_only=True))
+        total_row = next((r for r in rows if r[0] and 'TOTAL' in str(r[0]).upper()), None)
+        if total_row is None: continue
+        for d in range(max_day):
+            c = 1 + d * FLOOR_STRIDE
+            m = n(total_row[c]) if c < len(total_row) else 0.0
+            v = n(total_row[c+1]) if c+1 < len(total_row) else 0.0
+            totals[d] = (totals[d][0] + m, totals[d][1] + v)
+    return totals
+
+
+# ── Step 9: Build price chart SVG content ─────────────────────────────────────
+def build_price_chart_content(daily_con, daily_auc, max_day):
+    """
+    daily_con: list of (mass, value) per day [all contract regions summed]
+    daily_auc: list of (mass, value) per day [all auction floors summed]
+    Returns full HTML block: <div class="price-line-wrap">...<svg>...</svg></div>
+    """
+    # Cumulative prices per day
+    cum_cm = cum_cv = cum_am = cum_av = 0.0
+    con_pts = []; auc_pts = []; nat_pts = []
+
+    for d in range(max_day):
+        cm, cv = daily_con[d]; am, av = daily_auc[d]
+        cum_cm += cm; cum_cv += cv
+        cum_am += am; cum_av += av
+        cp = cum_cv / cum_cm if cum_cm > 0 else None
+        ap = cum_av / cum_am if cum_am > 0 else None
+        nm = cum_cm + cum_am; nv2 = cum_cv + cum_av
+        np_ = nv2 / nm if nm > 0 else None
+        con_pts.append(cp); auc_pts.append(ap); nat_pts.append(np_)
+
+    # X scale: D1 at x=46, D_max at x=746
+    W = 700.0
+    def px(d_zero):  # d_zero is 0-indexed day
+        return round(46.0 + d_zero * W / (max_day - 1), 1)
+
+    # Y scale: price -> y (1.50 = 157.5, 3.50 = 27.0; 65.25px per dollar)
+    Y_BOT = 157.5; Y_SCALE = 65.25
+    def py(price):
+        if price is None: return None
+        y = Y_BOT - (price - 1.50) * Y_SCALE
+        return round(max(10.0, min(164.0, y)), 1)
+
+    # Determine day labels (every 5 days + last day)
+    label_days = list(range(0, max_day, 5))  # 0, 5, 10, ...
+    if (max_day - 1) not in label_days:
+        label_days.append(max_day - 1)
+
+    h = '  <!-- ====== DAILY PRICE TREND CHART ====== -->\n'
+    h += '  <div class="price-line-wrap" style="border-color:#30363d;margin-bottom:18px">\n'
+    h += '    <div class="plct"><div class="dl" style="background:var(--chv)"></div>'
+    h += '2026 Cumulative Avg Price ($/kg) by Selling Day &nbsp;&middot;&nbsp; Contract &nbsp;&middot;&nbsp; Auction &nbsp;&middot;&nbsp; National</div>\n'
+    h += '    <svg viewBox="0 0 760 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:200px;display:block">\n'
+
+    # Grid lines (horizontal — price levels)
+    for price, label in [(1.50, '$1.50'), (2.00, '$2.00'), (2.50, '$2.50'),
+                         (3.00, '$3.00'), (3.50, '$3.50')]:
+        yg = py(price)
+        h += '<line x1="46" y1="{}" x2="746" y2="{}" stroke="#21262d" stroke-width="1"/>\n'.format(yg, yg)
+        h += '<text x="42" y="{}" text-anchor="end" fill="#7d8590" font-size="10">{}</text>\n'.format(round(yg + 3.5, 1), label)
+
+    # Grid lines (vertical — day markers)
+    for di in label_days:
+        xv = px(di)
+        lbl = 'D{}'.format(di + 1)
+        h += '<line x1="{}" y1="14" x2="{}" y2="164" stroke="#21262d" stroke-width="1" stroke-dasharray="3,3"/>\n'.format(xv, xv)
+        h += '<text x="{}" y="178" text-anchor="middle" fill="#7d8590" font-size="10">{}</text>\n'.format(xv, lbl)
+
+    # X-axis baseline
+    h += '<line x1="46" y1="164" x2="746" y2="164" stroke="#30363d" stroke-width="1"/>\n'
+
+    # Helper: build polyline points string
+    def polyline_pts(prices):
+        pts = []
+        for di, price in enumerate(prices):
+            if price is None: continue
+            pts.append('{},{}'.format(px(di), py(price)))
+        return ' '.join(pts)
+
+    # Contract line (green)
+    h += '<polyline points="{}" fill="none" stroke="#2d9a4e" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>\n'.format(polyline_pts(con_pts))
+    # National line (gold)
+    h += '<polyline points="{}" fill="none" stroke="#d4c060" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>\n'.format(polyline_pts(nat_pts))
+    # Auction line (blue)
+    h += '<polyline points="{}" fill="none" stroke="#388bfd" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>\n'.format(polyline_pts(auc_pts))
+
+    # End-point dots and labels
+    last = max_day - 1
+    xlast = px(last)
+    con_last = con_pts[last]; auc_last = auc_pts[last]; nat_last = nat_pts[last]
+    if con_last:
+        yc = py(con_last)
+        h += '<circle cx="{}" cy="{}" r="4" fill="#2d9a4e"/>\n'.format(xlast, yc)
+        h += '<text x="{}" y="{}" text-anchor="end" fill="#2d9a4e" font-size="9.5" font-weight="700">${:.3f}</text>\n'.format(xlast - 5, yc - 3, con_last)
+    if nat_last:
+        yn = py(nat_last)
+        h += '<circle cx="{}" cy="{}" r="4" fill="#d4c060"/>\n'.format(xlast, yn)
+        h += '<text x="{}" y="{}" text-anchor="end" fill="#d4c060" font-size="9.5" font-weight="700">${:.3f}</text>\n'.format(xlast - 5, yn + 11, nat_last)
+    if auc_last:
+        ya = py(auc_last)
+        h += '<circle cx="{}" cy="{}" r="4" fill="#388bfd"/>\n'.format(xlast, ya)
+        h += '<text x="{}" y="{}" text-anchor="end" fill="#388bfd" font-size="9.5" font-weight="700">${:.3f}</text>\n'.format(xlast - 5, ya - 3, auc_last)
+
+    # Legend
+    h += '<line x1="56" y1="189" x2="76" y2="189" stroke="#2d9a4e" stroke-width="2.5"/>\n'
+    h += '<text x="81" y="193" fill="#7d8590" font-size="10">2026 Contract</text>\n'
+    h += '<line x1="231" y1="189" x2="251" y2="189" stroke="#d4c060" stroke-width="2.5"/>\n'
+    h += '<text x="256" y="193" fill="#7d8590" font-size="10">2026 National</text>\n'
+    h += '<line x1="406" y1="189" x2="426" y2="189" stroke="#388bfd" stroke-width="2.5"/>\n'
+    h += '<text x="431" y="193" fill="#7d8590" font-size="10">2026 Auction</text>\n'
+
+    h += '    </svg>\n'
+    h += '  </div>\n'
+    return h
+
+
+# ── Step 10: Build P0 header HTML ─────────────────────────────────────────────
 def build_p0_hdr_html(day, end_date):
-    """end_date: datetime.date object for last selling day"""
-    import datetime
-    month_abbr = {1:'Jan',2:'Feb',3:'Mar',4:'Apr',5:'May',6:'Jun',
-                  7:'Jul',8:'Aug',9:'Sep',10:'Oct',11:'Nov',12:'Dec'}
-    date_str = str(end_date.day).zfill(2) + ' ' + month_abbr[end_date.month]
+    ma = {1:'Jan',2:'Feb',3:'Mar',4:'Apr',5:'May',6:'Jun',
+          7:'Jul',8:'Aug',9:'Sep',10:'Oct',11:'Nov',12:'Dec'}
+    ds = str(end_date.day).zfill(2) + ' ' + ma[end_date.month]
     return (
         '      <p>Chevron Tobacco &nbsp;&middot;&nbsp; Season Day 1&ndash;' + str(day) +
-        ' &nbsp;&middot;&nbsp; 04 Mar &ndash; ' + date_str + ' 2026</p>\n'
-        '    </div>\n'
-        '  </div>\n'
+        ' &nbsp;&middot;&nbsp; 04 Mar &ndash; ' + ds + ' 2026</p>\n'
+        '    </div>\n  </div>\n'
         '  <div style="display:flex;gap:9px;align-items:center">\n'
         '    <span class="badge">DAY ' + str(day) + '</span>\n'
         '    <span style="font-size:11px;color:var(--mut)">2026 vs 2025 Day 1&ndash;' + str(day) + ' equivalent</span>\n'
@@ -465,37 +592,22 @@ def build_p0_hdr_html(day, end_date):
     )
 
 
-# ── Step 8: Build P0 overview body HTML ──────────────────────────────────────
+# ── Step 11: Build P0 overview body HTML ──────────────────────────────────────
 def build_p0_ov_html(ov, day, end_date):
-    """Build the full P0_OV injection block (topbar + overview table + floors + regions)."""
-    import datetime
-    month_abbr = {1:'Jan',2:'Feb',3:'Mar',4:'Apr',5:'May',6:'Jun',
-                  7:'Jul',8:'Aug',9:'Sep',10:'Oct',11:'Nov',12:'Dec'}
-    date_str = str(end_date.day).zfill(2) + ' ' + month_abbr[end_date.month]
+    ma = {1:'Jan',2:'Feb',3:'Mar',4:'Apr',5:'May',6:'Jun',
+          7:'Jul',8:'Aug',9:'Sep',10:'Oct',11:'Nov',12:'Dec'}
+    ds = str(end_date.day).zfill(2) + ' ' + ma[end_date.month]
 
-    def fmt_m(kg):
-        """e.g. 211.2M"""
-        return '{:.1f}M'.format(kg / 1e6)
-
-    def fmt_mn(kg):
-        """e.g. 13.8M with 1dp"""
-        return '{:.2f}M'.format(kg / 1e6)
-
-    def fmt_p(p):
-        """e.g. $2.631"""
-        return '${:.3f}'.format(p)
-
-    def fmt_v(usd):
-        """e.g. $545.7M"""
-        return '${:.1f}M'.format(usd / 1e6)
+    def fmt_m(kg): return '{:.1f}M'.format(kg / 1e6)
+    def fmt_mn(kg): return '{:.2f}M'.format(kg / 1e6)
+    def fmt_p(p): return '${:.3f}'.format(p)
+    def fmt_v(usd): return '${:.1f}M'.format(usd / 1e6)
 
     def pct(new_v, old_v):
         if old_v == 0: return ('', 'up')
         c = (new_v - old_v) / old_v * 100
-        if c >= 0:
-            return ('&#9650; +{:.1f}%'.format(c), 'up')
-        else:
-            return ('&#9660; &minus;{:.1f}%'.format(abs(c)), 'dn')
+        if c >= 0: return ('&#9650; +{:.1f}%'.format(c), 'up')
+        else: return ('&#9660; &minus;{:.1f}%'.format(abs(c)), 'dn')
 
     nat26m = ov['nat26_m']; nat25m = ov['nat25_m']
     nat26p = ov['nat26_p']; nat25p = ov['nat25_p']
@@ -503,15 +615,12 @@ def build_p0_ov_html(ov, day, end_date):
     con26p = ov['con26_p']; con25p = ov['con25_p']
     auc26m = ov['auc26_m']; auc25m = ov['auc25_m']
     auc26p = ov['auc26_p']; auc25p = ov['auc25_p']
-
     tsf26m = ov['tsf26_m']; tsf26v = ov['tsf26_v']; tsf26p = ov['tsf26_p']
     ptf26m = ov['ptf26_m']; ptf26v = ov['ptf26_v']; ptf26p = ov['ptf26_p']
     etf26m = ov['etf26_m']; etf26v = ov['etf26_v']; etf26p = ov['etf26_p']
-
-    tsf25m = _TSF25_M;  tsf25v = _TSF25_V;  tsf25p = tsf25v / tsf25m
+    tsf25m = _TSF25_M; tsf25v = _TSF25_V; tsf25p = tsf25v / tsf25m
     ptf25m = _PTSF25_M; ptf25v = _PTSF25_V; ptf25p = ptf25v / ptf25m
 
-    # Change tags
     nat_mc, nat_mc_cls = pct(nat26m, nat25m)
     nat_pc, nat_pc_cls = pct(nat26p, nat25p)
     con_mc, con_mc_cls = pct(con26m, con25m)
@@ -523,20 +632,17 @@ def build_p0_ov_html(ov, day, end_date):
     ptf_mc, ptf_mc_cls = pct(ptf26m, ptf25m)
     ptf_pc, ptf_pc_cls = pct(ptf26p, ptf25p)
 
-    ROW_STYLE = 'display:grid;grid-template-columns:52px 1fr 1fr 1fr'
-    CELL_MUT  = 'padding:9px 0 9px 13px;font-size:11px;color:var(--mut);font-weight:600;display:flex;align-items:center'
-    CELL_25   = 'padding:9px 10px;text-align:right;font-size:12px;color:var(--mut)'
-    CELL_CHG  = 'padding:9px 10px;text-align:right;font-size:12px;font-weight:700'
+    RS = 'display:grid;grid-template-columns:52px 1fr 1fr 1fr'
+    CM = 'padding:9px 0 9px 13px;font-size:11px;color:var(--mut);font-weight:600;display:flex;align-items:center'
+    C5 = 'padding:9px 10px;text-align:right;font-size:12px;color:var(--mut)'
+    CC = 'padding:9px 10px;text-align:right;font-size:12px;font-weight:700'
 
     h = ''
-    # ── p0-topbar ─────────────────────────────────────────────────────────────
     h += '<div class="p0-topbar">\n'
     h += '  <div class="p0-topbar-title">TIMB FCV &mdash; 2026 SEASON OVERVIEW</div>\n'
-    h += '  <div class="p0-topbar-sub">Season Day ' + str(day) + ' &nbsp;&middot;&nbsp; Full Season &nbsp;&middot;&nbsp; 04 Mar &ndash; ' + date_str + ' 2026</div>\n'
-    h += '</div>\n'
-    h += '<div class="p0-body">\n\n'
+    h += '  <div class="p0-topbar-sub">Season Day ' + str(day) + ' &nbsp;&middot;&nbsp; Full Season &nbsp;&middot;&nbsp; 04 Mar &ndash; ' + ds + ' 2026</div>\n'
+    h += '</div>\n<div class="p0-body">\n\n'
 
-    # ── Overview label ────────────────────────────────────────────────────────
     h += '  <!-- ====== OVERVIEW SUMMARY TABLE ====== -->\n'
     h += '  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#888;margin-bottom:10px">'
     h += 'Overview &mdash; 2026 vs 2025 (Day 1&ndash;' + str(day) + ' equivalent)</div>\n'
@@ -546,26 +652,25 @@ def build_p0_ov_html(ov, day, end_date):
         s  = '    <div class="ovw-card ' + cls + '">\n'
         s += '      <div class="ovw-head ' + cls + '"><div class="ovw-icon ' + icon_cls + '">' + icon + '</div>' + title + '</div>\n'
         s += '      <div class="ovw-body">\n'
-        s += '        <div style="' + ROW_STYLE + ';border-bottom:1px solid var(--brd)">\n'
+        s += '        <div style="' + RS + ';border-bottom:1px solid var(--brd)">\n'
         s += '          <div></div>\n'
-        s += '          <div class="col-hdr" style="padding:5px 10px;font-size:10px;color:var(--mut);font-weight:600;text-align:right;display:flex;align-items:center;justify-content:flex-end">2025</div>\n'
-        s += '          <div class="col-hdr" style="padding:5px 10px;font-size:10px;color:var(--mut);font-weight:600;text-align:right;display:flex;align-items:center;justify-content:flex-end">2026</div>\n'
-        s += '          <div class="col-hdr" style="padding:5px 10px;font-size:10px;color:var(--mut);font-weight:600;text-align:right;display:flex;align-items:center;justify-content:flex-end">Change</div>\n'
+        for lbl in ['2025', '2026', 'Change']:
+            s += '          <div class="col-hdr" style="padding:5px 10px;font-size:10px;color:var(--mut);font-weight:600;text-align:right;display:flex;align-items:center;justify-content:flex-end">' + lbl + '</div>\n'
         s += '        </div>\n'
-        s += '        <div style="' + ROW_STYLE + ';border-bottom:1px solid var(--brd)">\n'
-        s += '          <div class="ovw-row" style="display:contents"><div style="' + CELL_MUT + '">Mass</div>'
-        s += '<div style="' + CELL_25 + '">' + fmt_m(m25) + '</div>'
+        s += '        <div style="' + RS + ';border-bottom:1px solid var(--brd)">\n'
+        s += '          <div class="ovw-row" style="display:contents">'
+        s += '<div style="' + CM + '">Mass</div>'
+        s += '<div style="' + C5 + '">' + fmt_m(m25) + '</div>'
         s += '<div style="padding:9px 10px;text-align:right;font-size:13px;font-weight:700;color:' + color + '">' + fmt_m(m26) + '</div>'
-        s += '<div style="' + CELL_CHG + '" class="' + mc_cls + '">' + mc + '</div></div>\n'
+        s += '<div style="' + CC + '" class="' + mc_cls + '">' + mc + '</div></div>\n'
         s += '        </div>\n'
-        s += '        <div style="' + ROW_STYLE + '">\n'
-        s += '          <div style="display:contents"><div style="' + CELL_MUT + '">Price</div>'
-        s += '<div style="' + CELL_25 + '">' + fmt_p(p25) + '</div>'
+        s += '        <div style="' + RS + '">\n'
+        s += '          <div style="display:contents">'
+        s += '<div style="' + CM + '">Price</div>'
+        s += '<div style="' + C5 + '">' + fmt_p(p25) + '</div>'
         s += '<div style="padding:9px 10px;text-align:right;font-size:13px;font-weight:700;color:' + color + '">' + fmt_p(p26) + '</div>'
-        s += '<div style="' + CELL_CHG + '" class="' + pc_cls + '">' + pc + '</div></div>\n'
-        s += '        </div>\n'
-        s += '      </div>\n'
-        s += '    </div>\n\n'
+        s += '<div style="' + CC + '" class="' + pc_cls + '">' + pc + '</div></div>\n'
+        s += '        </div>\n      </div>\n    </div>\n\n'
         return s
 
     h += ovw_card('nat', 'ni', '&Sigma;', 'National Crop',
@@ -577,33 +682,26 @@ def build_p0_ov_html(ov, day, end_date):
     h += ovw_card('auc', 'ai', 'A', 'Auction',
                   auc25m, auc25p, auc26m, auc26p, 'var(--blu)',
                   auc_mc, auc_mc_cls, auc_pc, auc_pc_cls)
+    h += '  </div>\n\n'
 
-    h += '  </div>\n\n'  # /ovw-grid
-
-    # ── Auction section ────────────────────────────────────────────────────────
+    # Auction section
     auc_mvol, auc_mvol_cls = pct(auc26m, auc25m)
     auc_mprc, auc_mprc_cls = pct(auc26p, auc25p)
     h += '  <!-- ====== AUCTION SECTION ====== -->\n'
-    h += '  <div class="sec-hdr">\n'
-    h += '    <div class="sec-icon si-a">A</div>\n'
-    h += '    <h2>AUCTION</h2>\n'
+    h += '  <div class="sec-hdr">\n    <div class="sec-icon si-a">A</div>\n    <h2>AUCTION</h2>\n'
     h += '    <div class="sec-totals">\n'
     h += '      <span>2026: <strong>' + fmt_mn(auc26m) + ' kg</strong></span>\n'
     h += '      <span>2025: <strong>' + fmt_mn(auc25m) + ' kg</strong></span>\n'
     h += '      <span class="' + auc_mvol_cls + '" style="font-weight:700">' + auc_mvol + ' vol</span>\n'
     h += '      <span class="' + auc_mprc_cls + '" style="font-weight:700">' + auc_mprc + ' price</span>\n'
-    h += '    </div>\n'
-    h += '  </div>\n\n'
+    h += '    </div>\n  </div>\n\n'
 
     def floor_card(name, note, m26, v26, p26, m25, v25, p25, is_new=False):
         mc, mc_cls = pct(m26, m25) if not is_new else ('', 'up')
-        pc, pc_cls = pct(p26, p25) if not is_new else ('', 'dn')
-        s  = '    <div class="fc fl">\n'
-        s += '      <div class="fn">' + name
-        if note:
-            s += ' <span style="font-weight:400;font-size:9px;opacity:.55">' + note + '</span>'
-        s += '</div>\n'
-        s += '      <div class="cmp">\n'
+        pc2, pc_cls2 = pct(p26, p25) if not is_new else ('', 'dn')
+        s  = '    <div class="fc fl">\n      <div class="fn">' + name
+        if note: s += ' <span style="font-weight:400;font-size:9px;opacity:.55">' + note + '</span>'
+        s += '</div>\n      <div class="cmp">\n'
         s += '        <div><div class="yr">2026</div>'
         s += '<div class="fv y6b">' + fmt_mn(m26) + ' <span style="font-size:11px">kg</span></div>'
         s += '<div class="fp">' + fmt_v(v26) + ' &nbsp;&middot;&nbsp; ' + fmt_p(p26) + '/kg</div></div>\n'
@@ -614,15 +712,13 @@ def build_p0_ov_html(ov, day, end_date):
             s += '        <div><div class="yr">2025</div>'
             s += '<div class="fv y5">' + fmt_mn(m25) + ' <span style="font-size:11px">kg</span></div>'
             s += '<div class="fp">' + fmt_v(v25) + ' &nbsp;&middot;&nbsp; ' + fmt_p(p25) + '/kg</div></div>\n'
-        s += '      </div>\n'
-        s += '      <div class="tags">'
+        s += '      </div>\n      <div class="tags">'
         if is_new:
             s += '<span class="tag twn">New floor in 2026</span>'
         else:
             s += '<span class="tag t' + mc_cls + '">' + mc + ' vol</span>'
-            s += '<span class="tag t' + pc_cls + '">' + pc + ' price</span>'
-        s += '</div>\n'
-        s += '    </div>\n'
+            s += '<span class="tag t' + pc_cls2 + '">' + pc2 + ' price</span>'
+        s += '</div>\n    </div>\n'
         return s
 
     h += '  <div class="fc-grid">\n'
@@ -631,40 +727,47 @@ def build_p0_ov_html(ov, day, end_date):
     h += floor_card('ETF Floor', 'New 2026', etf26m, etf26v, etf26p, 0, 0, 0, is_new=True)
     h += '  </div>\n\n'
 
-    # ── Contract section ───────────────────────────────────────────────────────
+    # Contract section
     con_mvol, con_mvol_cls = pct(con26m, con25m)
     con_mprc, con_mprc_cls = pct(con26p, con25p)
     h += '  <!-- ====== CONTRACT SECTION ====== -->\n'
-    h += '  <div class="sec-hdr">\n'
-    h += '    <div class="sec-icon si-c">C</div>\n'
-    h += '    <h2>CONTRACT</h2>\n'
+    h += '  <div class="sec-hdr">\n    <div class="sec-icon si-c">C</div>\n    <h2>CONTRACT</h2>\n'
     h += '    <div class="sec-totals">\n'
     h += '      <span>2026: <strong>' + fmt_m(con26m) + ' kg</strong></span>\n'
     h += '      <span>2025: <strong>' + fmt_m(con25m) + ' kg</strong></span>\n'
     h += '      <span class="' + con_mvol_cls + '" style="font-weight:700">' + con_mvol + ' vol</span>\n'
     h += '      <span class="' + con_mprc_cls + '" style="font-weight:700">' + con_mprc + ' price</span>\n'
-    h += '    </div>\n'
-    h += '  </div>\n\n'
+    h += '    </div>\n  </div>\n\n'
 
     h += '  <div class="fc-grid" style="grid-template-columns:repeat(3,1fr)">\n'
     for reg in ov['regions']:
-        nm  = reg['name']; co = reg['co']; m = reg['m']; v = reg['v']; p = reg['p']
-        s  = '    <div class="fc rg">\n'
-        s += '      <div class="fn">' + nm + '</div>\n'
+        nm = reg['name']; co = reg['co']; m = reg['m']; v = reg['v']; p = reg['p']
+        r25 = _REG25.get(nm, None)
+        s  = '    <div class="fc rg">\n      <div class="fn">' + nm + '</div>\n'
         s += '      <div class="cmp">\n'
         s += '        <div><div class="yr">2026</div>'
         s += '<div class="fv y6g">' + fmt_m(m) + ' <span style="font-size:11px">kg</span></div>'
         s += '<div class="fp">' + fmt_v(v) + ' &nbsp;&middot;&nbsp; ' + fmt_p(p) + '/kg &nbsp;&middot;&nbsp; ' + str(co) + ' co</div></div>\n'
-        s += '      </div>\n'
-        s += '      <div class="tags"><span class="tag twn">2026 Season-to-Date</span></div>\n'
-        s += '    </div>\n'
+        if r25:
+            r25m = r25['m']; r25p = r25['p']; r25v = r25m * r25p
+            s += '        <div><div class="yr">2025 D1&ndash;39</div>'
+            s += '<div class="fv y5">' + fmt_m(r25m) + ' <span style="font-size:11px">kg</span></div>'
+            s += '<div class="fp">' + fmt_v(r25v) + ' &nbsp;&middot;&nbsp; ' + fmt_p(r25p) + '/kg</div></div>\n'
+            mc2, mc_cls2 = pct(m, r25m)
+            pc2, pc_cls2 = pct(p, r25p)
+            s += '      </div>\n      <div class="tags">'
+            s += '<span class="tag t' + mc_cls2 + '">' + mc2 + '</span>'
+            s += '<span class="tag t' + pc_cls2 + '">' + pc2 + ' price</span>'
+        else:
+            s += '      </div>\n      <div class="tags">'
+            s += '<span class="tag twn">2026 Season-to-Date</span>'
+        s += '</div>\n    </div>\n'
         h += s
     h += '  </div>\n'
-
     return h
 
 
-# ── Step 9: Inject all blocks into HTML ───────────────────────────────────────
+# ── Step 12: Inject all blocks into HTML ──────────────────────────────────────
 def _inject_html_block(html, start_marker, end_marker, content):
     s = html.find(start_marker)
     e = html.find(end_marker)
@@ -674,34 +777,26 @@ def _inject_html_block(html, start_marker, end_marker, content):
     return html[:s + len(start_marker)] + '\n' + content + '\n' + html[e:], True
 
 
-def inject_into_dashboard(ra_js, ov_js, p0_hdr_html, p0_ov_html):
+def inject_into_dashboard(ra_js, ov_js, p0_hdr_html, p0_ov_html, p0_chart_html):
     with open(DASHBOARD, 'r', encoding='utf-8') as f:
         html = f.read()
 
-    changed = False
-
-    # JS data blocks (script section)
     for ms, me, new_js in [
         ('/* RA_DATA_START */', '/* RA_DATA_END */', ra_js),
         ('/* OV_DATA_START */', '/* OV_DATA_END */', ov_js),
     ]:
         if ms not in html:
-            print('  WARNING: JS marker not found: ' + ms)
-            continue
+            print('  WARNING: JS marker not found: ' + ms); continue
         start = html.index(ms) + len(ms)
         end   = html.index(me)
         html  = html[:start] + '\n' + new_js + '\n' + html[end:]
-        changed = True
 
-    # P0 HTML blocks
-    html, ok = _inject_html_block(html, '<!-- P0_HDR_START -->', '<!-- P0_HDR_END -->', p0_hdr_html)
-    if ok: changed = True
-    html, ok = _inject_html_block(html, '<!-- P0_OV_START -->', '<!-- P0_OV_END -->', p0_ov_html)
-    if ok: changed = True
+    html, _ = _inject_html_block(html, '<!-- P0_HDR_START -->',   '<!-- P0_HDR_END -->',   p0_hdr_html)
+    html, _ = _inject_html_block(html, '<!-- P0_OV_START -->',    '<!-- P0_OV_END -->',    p0_ov_html)
+    html, _ = _inject_html_block(html, '<!-- P0_CHART_START -->', '<!-- P0_CHART_END -->', p0_chart_html)
 
-    if changed:
-        with open(DASHBOARD, 'w', encoding='utf-8') as f:
-            f.write(html)
+    with open(DASHBOARD, 'w', encoding='utf-8') as f:
+        f.write(html)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -710,75 +805,72 @@ def main():
     print("generate_dashboard_data.py -- Regional & Overview Live Data")
     print("=" * 60)
 
-    # 1. Find latest file
     latest_path, max_day = find_latest_file()
     print("\n  Latest file: Day " + str(max_day) + " -- " + os.path.basename(latest_path))
 
-    # 2. Build day -> date mapping
-    print("  Building day->date mapping from all daily files...")
     day_dates = build_day_dates()
-    print("  Found dates for " + str(len(day_dates)) + " days")
+    print("  Day->date mapping: " + str(len(day_dates)) + " days")
 
-    # 3. Load latest workbook
-    print("  Loading latest daily FCV file...")
     wb = load_wb(latest_path)
 
-    # 4. Process each region
+    # Regional analysis (P1)
     print("  Processing regional sheets...")
-    D_data = {}
-    cr_data = []
-    chev_daily_all = {}
+    D_data = {}; cr_data = []; chev_daily_all = {}
 
     for region_key, cfg in REGIONS.items():
         sheet_name = cfg['sheet']
         if sheet_name not in wb.sheetnames:
-            print("  WARNING: Sheet '" + sheet_name + "' not found -- skipping " + region_key)
-            continue
-
+            print("  WARNING: Sheet '" + sheet_name + "' not found -- skipping " + region_key); continue
         ws = wb[sheet_name]
         chev_daily, mkt_daily, peers_raw = read_regional_sheet(ws, max_day)
-
         chev_daily_all[region_key] = chev_daily
-
-        region_data = compute_region(
-            region_key, cfg, chev_daily, mkt_daily, peers_raw, day_dates, max_day
-        )
+        region_data = compute_region(region_key, cfg, chev_daily, mkt_daily, peers_raw, day_dates, max_day)
         D_data[region_key] = region_data
-
         chev_std = region_data['chev_mass'][3]
         mkt_std  = region_data['mkt_std']
         cr_data.append({'r': region_key, 'm': chev_std})
+        print("    {:10s}: Chev={:>8,} kg  Mkt={:>12,} kg  PaceGap={:+.1f}pp".format(
+            region_key, chev_std, mkt_std, region_data['pace_gap_pp']))
 
-        print("    {:10s}: Chev={:>8,} kg  Mkt={:>12,} kg  Peers={}  PaceGap={:+.1f}pp".format(
-            region_key, chev_std, mkt_std, len(region_data['peers']), region_data['pace_gap_pp']))
-
-    # 5. Build JS blocks
-    print("\n  Building JS data blocks...")
     ra_js = build_ra_data(D_data, cr_data)
     ov_js = build_ov_data(chev_daily_all, day_dates, max_day)
 
-    # 6. Extract P0 overview data
+    # Contract daily totals from all 6 regions (for price chart)
+    print("  Reading daily totals for price chart...")
+    daily_con = [(0.0, 0.0)] * max_day
+    all_con_sheets = dict(REGIONS)  # KAROI, RUSAPE, BINDURA, HARARE
+    all_con_sheets.update({k: {'sheet': v} for k, v in EXTRA_CONTRACT_SHEETS.items()})
+    for rk, rcfg in all_con_sheets.items():
+        sh = rcfg['sheet']
+        if sh not in wb.sheetnames: continue
+        ws = wb[sh]
+        daily_r = read_region_daily_totals(ws, max_day, stride=STRIDE)
+        daily_con = [(daily_con[d][0] + daily_r[d][0],
+                      daily_con[d][1] + daily_r[d][1]) for d in range(max_day)]
+    con_total = sum(x[0] for x in daily_con)
+    print("    Contract total: {:,.0f} kg".format(con_total))
+
+    daily_auc = read_auction_floors_daily(wb, max_day)
+    auc_total = sum(x[0] for x in daily_auc)
+    print("    Auction total:  {:,.0f} kg".format(auc_total))
+
+    # P0 season overview data
     print("  Extracting P0 season overview data...")
     ov_data = extract_p0_overview(wb)
-    regions_read = [r['name'] for r in ov_data.get('regions', [])]
-    print("  Regions from SELLING POINT SUMMARY: " + ', '.join(regions_read))
     print("  National 2026: {:.1f}M kg @ ${:.3f}/kg".format(
         ov_data['nat26_m']/1e6, ov_data['nat26_p']))
-    print("  National 2025: {:.1f}M kg @ ${:.3f}/kg".format(
-        ov_data['nat25_m']/1e6, ov_data['nat25_p']))
 
-    # 7. Build P0 HTML blocks
     end_date = day_dates.get(max_day)
     if end_date is None:
-        from datetime import date
-        end_date = date.today()
-    p0_hdr_html = build_p0_hdr_html(max_day, end_date)
-    p0_ov_html  = build_p0_ov_html(ov_data, max_day, end_date)
+        from datetime import date as _date; end_date = _date.today()
 
-    # 8. Inject into dashboard
+    p0_hdr_html   = build_p0_hdr_html(max_day, end_date)
+    p0_ov_html    = build_p0_ov_html(ov_data, max_day, end_date)
+    p0_chart_html = build_price_chart_content(daily_con, daily_auc, max_day)
+
     print("  Injecting into dashboard HTML...")
-    inject_into_dashboard(ra_js, ov_js, p0_hdr_html, p0_ov_html)
-    print("\n  ✓ Dashboard updated successfully.")
+    inject_into_dashboard(ra_js, ov_js, p0_hdr_html, p0_ov_html, p0_chart_html)
+    print("\n  + Dashboard updated successfully.")
     print("    Dashboard: " + DASHBOARD)
     print("=" * 60)
 
