@@ -1686,7 +1686,7 @@ function raRender(){
   k+='<div class="t-kpi"><div class="t-kpi-lbl">Chevron Volume (STD)</div><div class="t-kpi-val gld">'+raFmt(d.chev_mass[3])+'</div><div class="t-kpi-sub gld">'+targetPct.toFixed(1)+'% of '+raFmt(d.target)+' target</div><div class="t-prog"><div class="t-prog-f" style="width:'+Math.min(targetPct,100).toFixed(0)+'%"></div></div></div>';
   k+='<div class="t-kpi"><div class="t-kpi-lbl">Chevron Avg Price</div><div class="t-kpi-val gld">'+raFp(d.chev_price[3])+'</div><div class="t-kpi-sub grn">'+(chevPricePct!==null?chevPricePct.toFixed(1)+'% below region avg':'—')+'</div><div class="t-prog"><div class="t-prog-f" style="width:'+Math.min(pricePct,100).toFixed(0)+'%"></div></div></div>';
   k+='<div class="t-kpi"><div class="t-kpi-lbl">Price Gap (vs Region Avg)</div><div class="t-kpi-val grn">$'+Math.abs(d.price_gap_std).toFixed(2)+'</div><div class="t-kpi-sub grn">per kg below regional avg</div></div>';
-  k+='<div class="t-kpi"><div class="t-kpi-lbl">Region Saving (D1–39)</div><div class="t-kpi-val grn">+$'+(saving/1000).toFixed(2)+'K</div><div class="t-kpi-sub grn">Rank '+chevRank+' of '+d.peers.length+' contractors</div></div>';
+  k+='<div class="t-kpi"><div class="t-kpi-lbl">Region Saving (D1–'+lastDay+')</div><div class="t-kpi-val grn">+$'+(saving/1000).toFixed(2)+'K</div><div class="t-kpi-sub grn">Rank '+chevRank+' of '+d.peers.length+' contractors</div></div>';
   k+='</div>';
   document.getElementById('t-kpis').innerHTML=k;
 
@@ -1773,10 +1773,10 @@ function raRender(){
   // Season P&L
   h+='<div class="t-card"><div class="t-card-hd"><div class="t-hd-bar" style="background:#1A5C35"></div><div class="t-hd-title">Season P&amp;L — '+raSel+'</div></div>';
   h+='<div class="t-card-body">';
-  h+='<div class="t-save"><div class="t-save-lbl">Region Saving (D1–39)</div><div class="t-save-val">+$'+(saving/1000).toFixed(2)+'K</div><div class="t-save-sub">Paid below regional avg &middot; buying below market</div></div>';
+  h+='<div class="t-save"><div class="t-save-lbl">Region Saving (D1–'+lastDay+')</div><div class="t-save-val">+$'+(saving/1000).toFixed(2)+'K</div><div class="t-save-sub">Paid below regional avg &middot; buying below market</div></div>';
   h+='<table class="t-tbl"><thead><tr><th>Period</th><th class="r">Reg Avg</th><th class="r">Chev</th><th class="r">Saving</th></tr></thead><tbody>';
   h+=d.weekly.map(function(w){var ws=w.loss!==null?(-w.loss):null;return'<tr><td class="mut" style="font-size:9px">'+w.wk+'</td><td class="r">'+(w.mkt?raFp(w.mkt):'—')+'</td><td class="r '+(w.chev?'gld':'mut')+'">'+(w.chev?raFp(w.chev):'—')+'</td><td class="r grn">'+(ws!==null?'+$'+(Math.abs(ws)/1000).toFixed(2)+'K':'—')+'</td></tr>';}).join('');
-  h+='</tbody><tfoot><tr class="ttl"><td colspan="3">Total Saving D1–D39</td><td class="r grn">+$'+(saving/1000).toFixed(2)+'K</td></tr></tfoot></table>';
+  h+='</tbody><tfoot><tr class="ttl"><td colspan="3">Total Saving D1–D'+lastDay+'</td><td class="r grn">+$'+(saving/1000).toFixed(2)+'K</td></tr></tfoot></table>';
   h+='</div></div>';
 
   // Pace Chart
