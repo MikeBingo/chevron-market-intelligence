@@ -41,7 +41,7 @@ def day_num_from_path(p):
 def find_latest_file():
     files = glob.glob(os.path.join(DAILY_DIR, "2026 daily fcv summary day *.xlsx"))
     if not files:
-        sys.exit("No daily FCV files found in root folder.")
+        raise RuntimeError("No daily FCV files found in root folder.")
     # Sort descending by day number; skip files that can't be opened (e.g. OneDrive cloud-only stubs)
     for f in sorted(files, key=day_num_from_path, reverse=True):
         try:
@@ -51,14 +51,14 @@ def find_latest_file():
             return f, day_num_from_path(f)
         except OSError:
             continue
-    sys.exit("No readable daily FCV files found.")
+    raise RuntimeError("No readable daily FCV files found.")
 
 def load_wb(path):
     import openpyxl
     try:
         return openpyxl.load_workbook(path, read_only=True, data_only=True)
     except Exception as e:
-        sys.exit(f"Cannot read {path}: {e}")
+        raise RuntimeError(f"Cannot read {path}: {e}")
 
 def n(v, default=0.0):
     """Safe numeric conversion."""
