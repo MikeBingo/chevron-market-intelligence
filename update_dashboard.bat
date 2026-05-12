@@ -7,12 +7,26 @@
 :: ─────────────────────────────────────────────────────────────────────────────
 
 set ROOT=%~dp0
+set CLEAN_SCRIPT=%ROOT%Scripts\run_2026_market_data.py
 set P1_SCRIPT=%ROOT%Scripts\generate_dashboard_data.py
 set P2_SCRIPT=%ROOT%Scripts\generate_competitor_data.py
 set LOG=%ROOT%market_data_refresh.log
 set REPO=%ROOT%
 
-echo [%date% %time%] Scheduled trigger fired >> "%LOG%"
+:: Force UTF-8 so Python Unicode characters don't crash on Windows
+chcp 65001 >nul 2>&1
+set PYTHONIOENCODING=utf-8
+set PYTHONUTF8=1
+
+echo [%date% %time%] Power Automate trigger fired >> "%LOG%"
+
+:: ── 0. Clean raw daily xlsx → Cleaned Tobacco Market Data 2026.xlsx ──────────
+python "%CLEAN_SCRIPT%"
+if %errorlevel% neq 0 (
+    echo [%date% %time%] ERROR: Cleaning script failed ^(exit %errorlevel%^) >> "%LOG%"
+    exit /b %errorlevel%
+)
+echo [%date% %time%] Data cleaned >> "%LOG%"
 
 :: ── 1a. Run P1 dashboard data (Season Overview + Regional Competitiveness) ───
 python "%P1_SCRIPT%"
