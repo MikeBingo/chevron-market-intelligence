@@ -26,7 +26,7 @@ REGIONS = {
     'KAROI':   {'col': '#2D6A4F', 'crop25': 54001067, 'target': 1800000, 'sheet': 'KAROI'},
     'RUSAPE':  {'col': '#E67E22', 'crop25': 16091025, 'target': 800000,  'sheet': 'RUSAPE '},
     'BINDURA': {'col': '#3498DB', 'crop25': 7020698,  'target': 900000,  'sheet': 'BINDURA '},
-    'HARARE':  {'col': '#9B59B6', 'crop25': 83000000, 'target': 300000,  'sheet': 'HARARE'},
+    'HARARE':  {'col': '#9B59B6', 'crop25': 177040000, 'target': 300000,  'sheet': 'HARARE'},
 }
 
 STRIDE = 10   # columns per day block in regional sheets
@@ -852,8 +852,17 @@ def inject_into_dashboard(ra_js, ov_js, p0_hdr_html, p0_ov_html, p0_chart_html):
     html, _ = _inject_html_block(html, '<!-- P0_OV_START -->',    '<!-- P0_OV_END -->',    p0_ov_html)
     html, _ = _inject_html_block(html, '<!-- P0_CHART_START -->', '<!-- P0_CHART_END -->', p0_chart_html)
 
-    with open(DASHBOARD, 'w', encoding='utf-8') as f:
-        f.write(html)
+    import time as _time
+    for attempt in range(1, 7):          # up to 6 attempts = ~90s total
+        try:
+            with open(DASHBOARD, 'w', encoding='utf-8') as f:
+                f.write(html)
+            break
+        except PermissionError:
+            if attempt == 6:
+                raise
+            print(f'  HTML locked (attempt {attempt}/6) — retrying in 15s...')
+            _time.sleep(15)
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -951,7 +960,6 @@ def main():
     print("\n  + Dashboard updated successfully.")
     print("    Dashboard: " + DASHBOARD)
     print("=" * 60)
-
 
 if __name__ == '__main__':
     main()
