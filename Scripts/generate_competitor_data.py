@@ -23,7 +23,7 @@ ROOT      = _WIN_ROOT if os.path.exists(_WIN_ROOT) else _LNX_ROOT
 DAILY_DIR = ROOT
 DASHBOARD = os.path.join(ROOT, "Market Intelligence Dashboard 2026.html")
 
-REGION_SHEETS  = ['KAROI', 'RUSAPE ', 'BINDURA ', 'HARARE']
+REGION_SHEETS  = ['KAROI', 'RUSAPE ', 'BINDURA ', 'HARARE', 'MVURWI ', 'MARONDERA', 'MUTOKO']
 CON_STRIDE     = 10
 AUCTION_SHEETS = ['TSF Daily Auction sales', 'ETF Daily Auction sales', 'PTSF Daily Auction sales']
 AUC_STRIDE     = 6
