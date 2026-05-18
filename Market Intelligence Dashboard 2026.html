@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="build-version" content="2026-05-18T08:03:12Z|cc5458b">
+  <meta name="build-version" content="2026-05-18T10:28:28Z|6567d39">
 <meta charset="UTF-8"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -863,7 +863,7 @@ if(rl) cr.forEach(r=>{rl.innerHTML+=`<div class="rrow"><span class="rn">${r.r}</
 const P2_DATA={
   "day": 49,
   "date": "14/05/2026",
-  "generated": "18 May 2026 10:03",
+  "generated": "18 May 2026 12:28",
   "chev": {
     "m": 3075875,
     "p": 1.6297,
@@ -1190,22 +1190,22 @@ function p2RenderInsights(){
       txt:'Contract channel = '+((P2_DATA.chan.contract.comp_m/(P2_DATA.chan.contract.comp_m+P2_DATA.chan.auction.comp_m))*100).toFixed(0)+'% of competitor buying. Chevron at <strong>'+((c.con_m/c.m)*100).toFixed(0)+'% contract-aligned</strong> — channel strategy matches market structure.'});
   } else if(p2Tab==='contract'){
     var cd=P2_DATA.chan.contract;
-    var pGapC=((c.con_p-cd.comp_p)/cd.comp_p*100);
+    var pGapC=((c.con_p-OV_AGG.con26_p)/OV_AGG.con26_p*100);
     var topCon=groups.slice().sort(function(a,b){return b.con_m-a.con_m;})[0];
     ins.push({col:'#9B1C1C',icon:'&#9888;',
       txt:'<strong>'+topCon.name+'</strong> leads contract at <strong>'+p2Fmt(topCon.con_m)+' kg</strong> avg '+p2Pp(topCon.con_p)+' — outbidding Chevron\'s '+p2Pp(c.con_p)+' by <strong>'+Math.abs(((topCon.con_p-c.con_p)/c.con_p*100)).toFixed(1)+'%</strong>.'});
     ins.push({col:'#B45309',icon:'&#8595;',
-      txt:'Chevron contract rate is <strong>'+Math.abs(pGapC).toFixed(1)+'% below</strong> sector contract avg ('+p2Pp(c.con_p)+' vs '+p2Pp(cd.comp_p)+'). Gap compounds grower defection risk at next renewal cycle.'});
+      txt:'Chevron contract rate is <strong>'+Math.abs(pGapC).toFixed(1)+'% below</strong> sector contract avg ('+p2Pp(c.con_p)+' vs '+p2Pp(OV_AGG.con26_p)+'). Gap compounds grower defection risk at next renewal cycle.'});
     ins.push({col:'#1E5C9B',icon:'&#9724;',
       txt:'Chevron processes <strong>'+((c.con_m/(P2_DATA.chan.contract.comp_m+c.con_m))*100).toFixed(1)+'%</strong> of total identifiable contract volume. Room to grow by closing the price gap and expanding grower base.'});
   } else {
     var ad=P2_DATA.chan.auction;
-    var pGapA=((c.auc_p-ad.comp_p)/ad.comp_p*100);
+    var pGapA=((c.auc_p-OV_AGG.auc26_p)/OV_AGG.auc26_p*100);
     var topAuc=groups.slice().sort(function(a,b){return b.auc_m-a.auc_m;})[0];
     ins.push({col:'#9B1C1C',icon:'&#9888;',
       txt:'Chevron has only <strong>'+p2Fmt(c.auc_m)+' kg</strong> on the auction floor — just <strong>'+((c.auc_m/c.m)*100).toFixed(1)+'%</strong> of its buying. Absent presence cedes daily grower relationships to rivals.'});
     ins.push({col:'#B45309',icon:'&#8595;',
-      txt:'Auction floor avg is '+p2Pp(ad.comp_p)+'/kg. Chevron at '+p2Pp(c.auc_p)+' (<strong>'+Math.abs(pGapA).toFixed(1)+'% below</strong>). Tactical bidding above floor avg would signal market commitment without full-season exposure.'});
+      txt:'Auction floor avg is '+p2Pp(OV_AGG.auc26_p)+'/kg. Chevron at '+p2Pp(c.auc_p)+' (<strong>'+Math.abs(pGapA).toFixed(1)+'% below</strong>). Tactical bidding above floor avg would signal market commitment without full-season exposure.'});
     ins.push({col:'#1E5C9B',icon:'&#9724;',
       txt:'<strong>'+topAuc.name+'</strong> leads auction at '+p2Fmt(topAuc.auc_m)+' kg, building grower loyalty on the floor that compounds into contract pipeline for future seasons.'});
   }
@@ -1543,7 +1543,7 @@ function p2RenderActions(){
   var c=P2_DATA.chev; var ct=P2_DATA.comp_total;
   var pGap=Math.abs(((c.p-ct.p)/ct.p*100)).toFixed(1);
   var ilt=P2_DATA.groups[0];
-  var aucGap=Math.abs(((c.auc_p-P2_DATA.chan.auction.comp_p)/P2_DATA.chan.auction.comp_p*100)).toFixed(1);
+  var aucGap=Math.abs(((c.auc_p-OV_AGG.auc26_p)/OV_AGG.auc26_p*100)).toFixed(1);
   var conTarget=(ct.p*0.97).toFixed(2);
 
   var acts=[
