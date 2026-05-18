@@ -378,8 +378,8 @@ def _row_html(m25, p25, m26, p26, m_chg, p_chg, vv_cls):
     lines.append('        </div>')
     lines.append('        <div class="cr">')
     lines.append('          <div class="cl">Price</div>')
-    lines.append('          <div class="cv"><div class="vy">${:.3f}/kg</div></div>'.format(p25))
-    lines.append('          <div class="cv"><div class="vv {}">${:.3f}</div></div>'.format(vv_cls, p26))
+    lines.append('          <div class="cv"><div class="vy">${:.2f}/kg</div></div>'.format(p25))
+    lines.append('          <div class="cv"><div class="vv {}">${:.2f}</div></div>'.format(vv_cls, p26))
     lines.append('          <div class="cv">{}</div>'.format(_chg_html(p_chg)))
     lines.append('        </div>')
     lines.append('      </div>')
@@ -507,16 +507,34 @@ def inject_into_dashboard(data):
         if not ok:
             print('  WARNING: {} markers not found -- block skipped.'.format(name))
 
+    # Atomic publish: write to <dest>.tmp then os.replace into the dashboard.
+    # Mirrors the P1 pattern in generate_dashboard_data.py so both writers
+    # behave the same way. P2 runs after a 15s orchestrator pause, so the
+    # backoff here is shorter than P1's: 3 retries × 5s = ~15s max.
+    # Note: P1 stamps the <meta name="build-version"> marker. P2 reads HTML
+    # that already contains that marker and writes it back unchanged — no
+    # marker handling needed here.
     import time as _time
-    for attempt in range(1, 7):          # up to 6 attempts = ~90s total
+    tmp_path = DASHBOARD + '.tmp'
+    with open(tmp_path, 'w', encoding='utf-8') as f:
+        f.write(html)
+    for attempt in range(1, 4):          # 3 attempts ≈ 10s of backoff
         try:
-            open(DASHBOARD, 'w', encoding='utf-8').write(html)
+            os.replace(tmp_path, DASHBOARD)
             break
         except PermissionError:
-            if attempt == 6:
-                raise
-            print(f'  HTML locked (attempt {attempt}/6) — retrying in 15s...')
-            _time.sleep(15)
+            if attempt == 3:
+                # Clean up the orphan .tmp so OneDrive doesn't sync a sibling
+                try:
+                    os.remove(tmp_path)
+                except OSError:
+                    pass
+                raise PermissionError(
+                    "Dashboard file appears to be open or locked. "
+                    "Close the browser/Excel preview and re-run."
+                )
+            print('  Dashboard locked (attempt {0}/3) - retrying in 5s...'.format(attempt))
+            _time.sleep(5)
     return all(ok for _, ok in ok_flags)
 
 if __name__ == '__main__':

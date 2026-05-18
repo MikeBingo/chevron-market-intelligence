@@ -26,11 +26,24 @@ set "LC_ALL=en_US.UTF-8"
 cd /d "%ROOT%"
 
 echo [%date% %time%] Trigger fired >> "%LOG%"
+echo STEP 1: folder = %ROOT%
+echo STEP 2: log    = %LOG%
 
-echo [%date% %time%] Running cleaning script... >> "%LOG%"
-python -X utf8 "%CLEAN_SCRIPT%" >> "%LOG%" 2>&1
+where python
 if errorlevel 1 (
+    echo ERROR: Python not found in PATH
+    echo [%date% %time%] ERROR: Python not in PATH >> "%LOG%"
+    pause
+    exit /b 1
+)
+
+echo STEP 3: Python found. Running P0...
+echo [%date% %time%] Running cleaning script... >> "%LOG%"
+python -X utf8 "%CLEAN_SCRIPT%"
+if errorlevel 1 (
+    echo ERROR: P0 cleaning script failed ^(see above^)
     echo [%date% %time%] ERROR: Cleaning script failed. >> "%LOG%"
+    pause
     exit /b 1
 )
 echo [%date% %time%] Data cleaned. >> "%LOG%"

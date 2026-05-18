@@ -350,7 +350,7 @@ def build_ov_data(chev_daily_all, day_dates, max_day):
     DD = {}
     for d, dt in sorted(day_dates.items()):
         if d <= max_day:
-            DD[d] = dt.strftime('%-d%b')   # Linux: no zero-pad
+            DD[d] = f"{dt.day}{dt.strftime('%b')}"   # portable: no zero-pad on Windows or Linux
 
     cd_json = json.dumps(cd, separators=(',', ':'))
     dd_json = json.dumps(DD, separators=(',', ':'))
@@ -610,15 +610,15 @@ def build_price_chart_content(daily_con, daily_auc, max_day):
     if con_last:
         yc = py(con_last)
         h += '<circle cx="{}" cy="{}" r="4" fill="#2d9a4e"/>\n'.format(xlast, yc)
-        h += '<text x="{}" y="{}" text-anchor="end" fill="#2d9a4e" font-size="9.5" font-weight="700">${:.3f}</text>\n'.format(xlast - 5, yc - 3, con_last)
+        h += '<text x="{}" y="{}" text-anchor="end" fill="#2d9a4e" font-size="9.5" font-weight="700">${:.2f}</text>\n'.format(xlast - 5, yc - 3, con_last)
     if nat_last:
         yn = py(nat_last)
         h += '<circle cx="{}" cy="{}" r="4" fill="#d4c060"/>\n'.format(xlast, yn)
-        h += '<text x="{}" y="{}" text-anchor="end" fill="#d4c060" font-size="9.5" font-weight="700">${:.3f}</text>\n'.format(xlast - 5, yn + 11, nat_last)
+        h += '<text x="{}" y="{}" text-anchor="end" fill="#d4c060" font-size="9.5" font-weight="700">${:.2f}</text>\n'.format(xlast - 5, yn + 11, nat_last)
     if auc_last:
         ya = py(auc_last)
         h += '<circle cx="{}" cy="{}" r="4" fill="#388bfd"/>\n'.format(xlast, ya)
-        h += '<text x="{}" y="{}" text-anchor="end" fill="#388bfd" font-size="9.5" font-weight="700">${:.3f}</text>\n'.format(xlast - 5, ya - 3, auc_last)
+        h += '<text x="{}" y="{}" text-anchor="end" fill="#388bfd" font-size="9.5" font-weight="700">${:.2f}</text>\n'.format(xlast - 5, ya - 3, auc_last)
 
     # Legend
     h += '<line x1="56" y1="189" x2="76" y2="189" stroke="#2d9a4e" stroke-width="2.5"/>\n'
@@ -657,7 +657,7 @@ def build_p0_ov_html(ov, day, end_date, reg25=None, auc25=None):
 
     def fmt_m(kg): return '{:.1f}M'.format(kg / 1e6)
     def fmt_mn(kg): return '{:.2f}M'.format(kg / 1e6)
-    def fmt_p(p): return '${:.3f}'.format(p)
+    def fmt_p(p): return '${:.2f}'.format(p)
     def fmt_v(usd): return '${:.1f}M'.format(usd / 1e6)
 
     def pct(new_v, old_v):
@@ -841,7 +841,12 @@ def _inject_html_block(html, start_marker, end_marker, content):
     return html[:s + len(start_marker)] + '\n' + content + '\n' + html[e:], True
 
 
-def inject_into_dashboard(ra_js, ov_js, p0_hdr_html, p0_ov_html, p0_chart_html):
+def _build_dashboard_html(ra_js, ov_js, p0_hdr_html, p0_ov_html, p0_chart_html):
+    """Read the current dashboard HTML and apply all injections.
+
+    Pure with respect to its inputs (no timestamps, no marker, no writes).
+    Used both by the production publish path and the --verify idempotency check.
+    """
     with open(DASHBOARD, 'r', encoding='utf-8') as f:
         html = f.read()
 
@@ -858,26 +863,101 @@ def inject_into_dashboard(ra_js, ov_js, p0_hdr_html, p0_ov_html, p0_chart_html):
     html, _ = _inject_html_block(html, '<!-- P0_HDR_START -->',   '<!-- P0_HDR_END -->',   p0_hdr_html)
     html, _ = _inject_html_block(html, '<!-- P0_OV_START -->',    '<!-- P0_OV_END -->',    p0_ov_html)
     html, _ = _inject_html_block(html, '<!-- P0_CHART_START -->', '<!-- P0_CHART_END -->', p0_chart_html)
+    return html
 
+
+def _git_short_sha():
+    """Return the short git SHA at ROOT, or 'nogit' if git is unavailable."""
+    import subprocess as _sp
+    try:
+        out = _sp.check_output(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            cwd=ROOT, stderr=_sp.DEVNULL, timeout=5
+        )
+        return out.decode('utf-8', errors='replace').strip() or 'nogit'
+    except Exception:
+        return 'nogit'
+
+
+def _apply_publish_marker(html):
+    """Insert or replace <meta name="build-version" content="..."> in <head>.
+
+    Returns (new_html, marker_value). The marker format is:
+        <ISO-8601 UTC timestamp>|<git-short-sha>
+    Live-deployment verification: GET the published URL and confirm the meta
+    tag's content matches the marker_value printed by this run.
+    """
+    marker_value = '{0}|{1}'.format(
+        datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+        _git_short_sha()
+    )
+    meta_tag = '<meta name="build-version" content="{0}">'.format(marker_value)
+    pattern = re.compile(r'<meta\s+name="build-version"\s+content="[^"]*"\s*/?>')
+    if pattern.search(html):
+        html = pattern.sub(meta_tag, html, count=1)
+    else:
+        # Insert immediately after the first <head ...> tag.
+        head_re = re.compile(r'(<head\b[^>]*>)', re.IGNORECASE)
+        if head_re.search(html):
+            html = head_re.sub(lambda m: m.group(1) + '\n  ' + meta_tag, html, count=1)
+        else:
+            print('  WARNING: <head> not found; build marker not inserted.')
+    return html, marker_value
+
+
+def _write_dashboard_atomic(html, dest_path):
+    """Atomic publish: write to <dest>.tmp in the same folder, then os.replace().
+
+    Viewers (browsers, Excel previews, GitHub Desktop) never observe a
+    partially-written dashboard. The replace step is retried on PermissionError
+    to handle transient Windows file-lock contention from OneDrive sync,
+    indexer, or a stale viewer.
+    """
     import time as _time
-    for attempt in range(1, 7):          # up to 6 attempts = ~90s total
+    tmp_path = dest_path + '.tmp'
+    # Write to tmp first. If this fails the dest is untouched.
+    with open(tmp_path, 'w', encoding='utf-8') as f:
+        f.write(html)
+    # Atomic rename. On Windows this fails with PermissionError if a process
+    # holds dest open without FILE_SHARE_DELETE — typically a browser/Excel
+    # has the dashboard open. Retry, then surface a clear human-readable error.
+    for attempt in range(1, 7):          # up to 6 attempts ≈ 75s of backoff
         try:
-            with open(DASHBOARD, 'w', encoding='utf-8') as f:
-                f.write(html)
-            break
+            os.replace(tmp_path, dest_path)
+            return
         except PermissionError:
             if attempt == 6:
-                raise
-            print(f'  HTML locked (attempt {attempt}/6) — retrying in 15s...')
+                # Clean up the orphan .tmp so OneDrive doesn't sync it as a sibling
+                try:
+                    os.remove(tmp_path)
+                except OSError:
+                    pass
+                raise PermissionError(
+                    "Dashboard file appears to be open or locked. "
+                    "Close the browser/Excel preview and re-run."
+                )
+            print('  Dashboard locked (attempt {0}/6) - retrying in 15s...'.format(attempt))
             _time.sleep(15)
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-def main():
-    print("=" * 60)
-    print("generate_dashboard_data.py -- Regional & Overview Live Data")
-    print("=" * 60)
+def inject_into_dashboard(ra_js, ov_js, p0_hdr_html, p0_ov_html, p0_chart_html):
+    """Production publish path: build HTML, stamp marker, write atomically."""
+    html = _build_dashboard_html(ra_js, ov_js, p0_hdr_html, p0_ov_html, p0_chart_html)
+    html, marker_value = _apply_publish_marker(html)
+    print('  Publish marker: ' + marker_value)
+    _write_dashboard_atomic(html, DASHBOARD)
 
+
+# ── Pipeline (data gathering, separated for reuse by --verify) ────────────────
+def _compute_pipeline_outputs():
+    """Run the full data pipeline against the latest daily FCV file.
+
+    Returns (ra_js, ov_js, p0_hdr_html, p0_ov_html, p0_chart_html) — the five
+    pieces consumed by _build_dashboard_html / inject_into_dashboard.
+
+    This function is invoked once in production and twice in --verify mode.
+    It MUST be deterministic given identical source data on disk.
+    """
     latest_path, max_day = find_latest_file()
     print("\n  Latest file: Day " + str(max_day) + " -- " + os.path.basename(latest_path))
 
@@ -954,6 +1034,19 @@ def main():
     print("  National 2025: {:.1f}M kg @ ${:.3f}/kg".format(
         ov_data['nat25_m']/1e6, ov_data['nat25_p']))
 
+    # Aggregate season totals → exposed as JS OV_AGG (appended to the OV_DATA
+    # block). Lets the dashboard's static rendering code (sidebar, price chart)
+    # read today's numbers instead of stale hardcoded values.
+    ov_agg = {
+        'nat26_m': ov_data['nat26_m'], 'nat26_p': ov_data['nat26_p'],
+        'auc26_m': ov_data['auc26_m'], 'auc26_p': ov_data['auc26_p'],
+        'con26_m': ov_data['con26_m'], 'con26_p': ov_data['con26_p'],
+        'nat25_m': ov_data['nat25_m'], 'nat25_p': ov_data['nat25_p'],
+        'auc25_m': ov_data['auc25_m'], 'auc25_p': ov_data['auc25_p'],
+        'con25_m': ov_data['con25_m'], 'con25_p': ov_data['con25_p'],
+    }
+    ov_js = ov_js + "\nconst OV_AGG=" + json.dumps(ov_agg, separators=(',', ':')) + ";"
+
     end_date = day_dates.get(max_day)
     if end_date is None:
         from datetime import date as _date; end_date = _date.today()
@@ -962,11 +1055,58 @@ def main():
     p0_ov_html    = build_p0_ov_html(ov_data, max_day, end_date, reg25=reg25, auc25=auc25)
     p0_chart_html = build_price_chart_content(daily_con, daily_auc, max_day)
 
+    return ra_js, ov_js, p0_hdr_html, p0_ov_html, p0_chart_html
+
+
+# ── --verify: idempotency check ──────────────────────────────────────────────
+def _run_verify():
+    """Run the pipeline twice, build HTML twice (no marker, no write), and
+    require the two outputs to be byte-identical. Exits 0 on match, 1 on diff.
+    """
+    print("** VERIFY MODE: running pipeline twice for idempotency check **\n")
+    print("[Pass 1]")
+    pieces1 = _compute_pipeline_outputs()
+    html1   = _build_dashboard_html(*pieces1)
+    print("\n[Pass 2]")
+    pieces2 = _compute_pipeline_outputs()
+    html2   = _build_dashboard_html(*pieces2)
+    if html1 == html2:
+        print("\n  + Idempotency verified: both passes produced identical HTML "
+              "({0:,} bytes).".format(len(html1)))
+        sys.exit(0)
+    # Save both for human inspection
+    import tempfile
+    tdir = tempfile.gettempdir()
+    p1 = os.path.join(tdir, 'verify_pass1.html')
+    p2 = os.path.join(tdir, 'verify_pass2.html')
+    with open(p1, 'w', encoding='utf-8') as f: f.write(html1)
+    with open(p2, 'w', encoding='utf-8') as f: f.write(html2)
+    print("\n  ! Idempotency FAILED: pass 1 ({0:,} bytes) != pass 2 ({1:,} bytes).".format(
+        len(html1), len(html2)))
+    print('    Pass 1 saved: ' + p1)
+    print('    Pass 2 saved: ' + p2)
+    print('    Diff with: fc /N "{0}" "{1}"   (Windows)'.format(p1, p2))
+    print('         or:   diff "{0}" "{1}"   (Linux)'.format(p1, p2))
+    sys.exit(1)
+
+
+# ── Main ─────────────────────────────────────────────────────────────────────
+def main():
+    print("=" * 60)
+    print("generate_dashboard_data.py -- Regional & Overview Live Data")
+    print("=" * 60)
+
+    if '--verify' in sys.argv:
+        _run_verify()
+        return
+
+    pieces = _compute_pipeline_outputs()
     print("  Injecting into dashboard HTML...")
-    inject_into_dashboard(ra_js, ov_js, p0_hdr_html, p0_ov_html, p0_chart_html)
+    inject_into_dashboard(*pieces)
     print("\n  + Dashboard updated successfully.")
     print("    Dashboard: " + DASHBOARD)
     print("=" * 60)
+
 
 if __name__ == '__main__':
     main()

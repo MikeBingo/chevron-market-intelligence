@@ -483,9 +483,6 @@ def main():
         latest_mtime = os.path.getmtime(latest_file)
         if latest_mtime <= out_mtime:
             log.info(f"Output already up-to-date (last day: {latest_day}). Skipping extraction.")
-            log.info("  Running dashboard updates anyway...")
-            _run_dashboard_updates(latest_file, latest_day, ROOT_FOLDER, log)
-            _git_push(ROOT_FOLDER, latest_day, log)
             log.info("=" * 60)
             return
         log.info(f"New data detected (Day {latest_day}). Regenerating...")
@@ -500,4 +497,20 @@ def main():
     log.info(f"Extracting Auction data...  [{time.time()-t0:.1f}s]")
     auction_df = extract_auction(wb, date_map)
     log.info(f"Extracting Contractor data...  [{time.time()-t0:.1f}s]")
-    contractor_df = extract_contract
+    contractor_df = extract_contractor(wb, date_map)
+    log.info(f"Extracting Sectoral data...  [{time.time()-t0:.1f}s]")
+    sectoral_df = extract_sectoral(wb)
+    wb.close()
+    log.info(f"Writing Excel -> {OUTPUT_FILE}  [{time.time()-t0:.1f}s]")
+    write_excel(auction_df, contractor_df, sectoral_df, OUTPUT_FILE)
+    elapsed = time.time() - t0
+    log.info(f"Summary (completed in {elapsed:.1f}s):")
+    log.info(f"  Auction Data 2026:    {len(auction_df):>5,} rows")
+    log.info(f"  Contractor Data 2026: {len(contractor_df):>5,} rows")
+    log.info(f"  Sectoral Data 2026:   {len(sectoral_df):>5,} rows")
+    log.info("Refresh complete.")
+    log.info("=" * 60)
+
+
+if __name__ == "__main__":
+    main()
