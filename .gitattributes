@@ -1,0 +1,21 @@
+# Force CRLF on Windows, stop LF/CRLF flip diffs.
+# Default: treat as text, store as LF in repo, check out CRLF on Windows.
+* text=auto eol=crlf
+
+# Source files — explicit for clarity
+*.html text eol=crlf
+*.py   text eol=crlf
+*.bat  text eol=crlf
+*.ps1  text eol=crlf
+*.md   text eol=crlf
+*.json text eol=crlf
+
+# Known binary types — never touch
+*.xlsx binary
+*.xlsm binary
+*.xls  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.pdf  binary
+*.zip  binary
