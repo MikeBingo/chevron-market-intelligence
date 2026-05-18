@@ -12,7 +12,7 @@ set "CLEAN_SCRIPT=%ROOT%Scripts\run_2026_market_data.py"
 set "P1_SCRIPT=%ROOT%Scripts\generate_dashboard_data.py"
 set "P2_SCRIPT=%ROOT%Scripts\generate_competitor_data.py"
 set "LOG=%ROOT%market_data_refresh.log"
-set "REPO=%ROOT%"
+set "REPO=%ROOT:~0,-1%"
 set "DASHBOARD=%ROOT%Market Intelligence Dashboard 2026.html"
 set "INDEX=%ROOT%index.html"
 
